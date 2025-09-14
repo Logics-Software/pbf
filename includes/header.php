@@ -486,6 +486,11 @@ if ($user && $user['role'] === 'customer') {
 				padding: 12px 8px;
 				font-size: 0.8rem;
 			}
+			
+			/* Add extra right margin to mobile category filter icon */
+			#categoryFilterIconMobile {
+				margin-right: 1.5rem !important;
+			}
 		}
 		
 		.nav-separator {
@@ -760,6 +765,23 @@ if ($user && $user['role'] === 'customer') {
 				border-radius: 8px;
 				margin-top: 5px;
 				backdrop-filter: blur(10px);
+				display: none !important;
+				position: static !important;
+				transform: none !important;
+				box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+				width: 100%;
+				min-width: auto;
+				z-index: 1000;
+			}
+			
+			.navbar-nav .dropdown-menu.show {
+				display: block !important;
+			}
+			
+			/* Ensure dropdown is visible when shown */
+			.navbar-nav .dropdown-menu.show {
+				opacity: 1;
+				visibility: visible;
 			}
 			
 			.navbar-nav .dropdown-item {
@@ -779,6 +801,17 @@ if ($user && $user['role'] === 'customer') {
 			.navbar-nav .dropdown-menu-end {
 				right: 0;
 				left: auto;
+			}
+			
+			/* Ensure dropdown positioning works correctly */
+			.navbar-nav .dropdown {
+				position: relative;
+			}
+			
+			/* Make sure dropdown items are visible */
+			.navbar-nav .dropdown-item {
+				white-space: nowrap;
+				overflow: visible;
 			}
 		}
 	</style>
@@ -838,7 +871,7 @@ if ($user && $user['role'] === 'customer') {
 					<!-- Master Dropdown Menu -->
 					<?php if (can_access('masterbarang') || can_access('mastercustomer') || can_access('mastersales')): ?>
 						<li class="nav-item dropdown">
-							<a class="nav-link dropdown-toggle" href="#" id="masterDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+							<a class="nav-link dropdown-toggle" href="#" id="masterDropdown" role="button" aria-expanded="false">
 								<i class="fas fa-database me-1"></i>Master
 							</a>
 							<ul class="dropdown-menu" aria-labelledby="masterDropdown">
@@ -864,7 +897,7 @@ if ($user && $user['role'] === 'customer') {
 					<!-- Transaksi Dropdown Menu -->
 					<?php if (can_access('order') && $user['role'] !== 'customer'): ?>
 						<li class="nav-item dropdown">
-							<a class="nav-link dropdown-toggle" href="#" id="transaksiDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+							<a class="nav-link dropdown-toggle" href="#" id="transaksiDropdown" role="button" aria-expanded="false">
 								<i class="fas fa-exchange-alt me-1"></i>Transaksi
 							</a>
 							<ul class="dropdown-menu" aria-labelledby="transaksiDropdown">
@@ -877,7 +910,7 @@ if ($user && $user['role'] === 'customer') {
 					<!-- Reports Dropdown Menu -->
 					<?php if (can_access('reports') && $user['role'] !== 'customer'): ?>
 						<li class="nav-item dropdown">
-							<a class="nav-link dropdown-toggle" href="#" id="reportsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+							<a class="nav-link dropdown-toggle" href="#" id="reportsDropdown" role="button" aria-expanded="false">
 								<i class="fas fa-chart-bar me-1"></i>Reports
 							</a>
 							<ul class="dropdown-menu" aria-labelledby="reportsDropdown">
@@ -955,7 +988,7 @@ if ($user && $user['role'] === 'customer') {
 						</li>
 					<?php endif; ?>
 					<li class="nav-item dropdown">
-						<a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+						<a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" aria-expanded="false">
 							<i class="fas fa-user me-1"></i>Halo, <?php echo htmlspecialchars($user['namalengkap']); ?>
 						</a>
 						<ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
@@ -1582,13 +1615,128 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Mobile Navbar Enhancement for Non-Customer Roles
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Mobile navbar enhancement loaded');
+    
     const navbarToggler = document.querySelector('.navbar-toggler');
     const navbarCollapse = document.querySelector('.navbar-collapse');
     
     if (navbarToggler && navbarCollapse) {
-        // Close navbar when clicking on nav links (mobile)
-        const navLinks = document.querySelectorAll('.navbar-nav .nav-link');
-        navLinks.forEach(link => {
+        console.log('Navbar elements found');
+        
+        // Handle dropdown clicks in mobile navbar
+        const dropdownToggles = document.querySelectorAll('.navbar-nav .dropdown-toggle');
+        console.log('Found dropdown toggles:', dropdownToggles.length);
+        
+        dropdownToggles.forEach((toggle, index) => {
+            console.log(`Setting up dropdown toggle ${index + 1}:`, toggle);
+            
+            toggle.addEventListener('click', function(e) {
+                console.log('Dropdown toggle clicked:', this);
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Find the dropdown menu (next sibling ul element)
+                const dropdownMenu = this.nextElementSibling;
+                console.log('Dropdown menu found:', dropdownMenu);
+                
+                if (!dropdownMenu) {
+                    console.error('Dropdown menu not found for:', this);
+                    return;
+                }
+                
+                // Close other open dropdowns
+                const otherDropdowns = document.querySelectorAll('.navbar-nav .dropdown-menu.show');
+                otherDropdowns.forEach(dropdown => {
+                    if (dropdown !== dropdownMenu) {
+                        dropdown.classList.remove('show');
+                        const toggle = dropdown.previousElementSibling;
+                        if (toggle) {
+                            toggle.setAttribute('aria-expanded', 'false');
+                        }
+                    }
+                });
+                
+                // Toggle current dropdown
+                const isOpen = dropdownMenu.classList.contains('show');
+                console.log('Dropdown is currently open:', isOpen);
+                
+                if (isOpen) {
+                    dropdownMenu.classList.remove('show');
+                    this.setAttribute('aria-expanded', 'false');
+                    console.log('Dropdown closed');
+                } else {
+                    dropdownMenu.classList.add('show');
+                    this.setAttribute('aria-expanded', 'true');
+                    console.log('Dropdown opened');
+                }
+            });
+        });
+        
+        // Fallback: If no dropdowns were found, try again after a short delay
+        if (dropdownToggles.length === 0) {
+            console.log('No dropdown toggles found initially, retrying...');
+            setTimeout(() => {
+                const retryDropdownToggles = document.querySelectorAll('.navbar-nav .dropdown-toggle');
+                console.log('Retry found dropdown toggles:', retryDropdownToggles.length);
+                
+                retryDropdownToggles.forEach((toggle, index) => {
+                    console.log(`Setting up retry dropdown toggle ${index + 1}:`, toggle);
+                    
+                    toggle.addEventListener('click', function(e) {
+                        console.log('Retry dropdown toggle clicked:', this);
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
+                        const dropdownMenu = this.nextElementSibling;
+                        console.log('Retry dropdown menu found:', dropdownMenu);
+                        
+                        if (!dropdownMenu) {
+                            console.error('Retry dropdown menu not found for:', this);
+                            return;
+                        }
+                        
+                        const otherDropdowns = document.querySelectorAll('.navbar-nav .dropdown-menu.show');
+                        otherDropdowns.forEach(dropdown => {
+                            if (dropdown !== dropdownMenu) {
+                                dropdown.classList.remove('show');
+                                const toggle = dropdown.previousElementSibling;
+                                if (toggle) {
+                                    toggle.setAttribute('aria-expanded', 'false');
+                                }
+                            }
+                        });
+                        
+                        const isOpen = dropdownMenu.classList.contains('show');
+                        console.log('Retry dropdown is currently open:', isOpen);
+                        
+                        if (isOpen) {
+                            dropdownMenu.classList.remove('show');
+                            this.setAttribute('aria-expanded', 'false');
+                            console.log('Retry dropdown closed');
+                        } else {
+                            dropdownMenu.classList.add('show');
+                            this.setAttribute('aria-expanded', 'true');
+                            console.log('Retry dropdown opened');
+                        }
+                    });
+                });
+            }, 100);
+        }
+        
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.dropdown')) {
+                const openDropdowns = document.querySelectorAll('.navbar-nav .dropdown-menu.show');
+                openDropdowns.forEach(dropdown => {
+                    dropdown.classList.remove('show');
+                    dropdown.previousElementSibling.setAttribute('aria-expanded', 'false');
+                });
+            }
+        });
+        
+        // Close navbar when clicking on regular nav links (not dropdown toggles)
+        const regularNavLinks = document.querySelectorAll('.navbar-nav .nav-link:not(.dropdown-toggle)');
+        regularNavLinks.forEach(link => {
             link.addEventListener('click', function() {
                 // Check if navbar is collapsed (mobile view)
                 if (navbarCollapse.classList.contains('show')) {
