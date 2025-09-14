@@ -103,6 +103,9 @@ include __DIR__ . '/includes/header.php';
 					</svg>
 					<span id="autoRefreshText">Auto Refresh</span>
 				</button>
+				<a href="masterbarang_kondisi_harga.php" class="btn btn-warning me-2">
+					<i class="fas fa-tags me-1"></i>Kelola Kondisi Harga
+				</a>
 				<a href="masterbarang_form.php" class="btn btn-primary">Tambah Barang</a>
 			</div>
 		</div>
@@ -196,6 +199,7 @@ include __DIR__ . '/includes/header.php';
 								</th>
 								<th>Harga Jual</th>
 								<th>Discount</th>
+								<th>Kondisi</th>
 								<th>Stok</th>
 								<th>Status</th>
 								<th>Foto</th>
@@ -205,7 +209,7 @@ include __DIR__ . '/includes/header.php';
 						<tbody>
 							<?php if (empty($barang)): ?>
 								<tr>
-									<td colspan="15" class="text-center text-muted">Belum ada data barang</td>
+									<td colspan="16" class="text-center text-muted">Belum ada data barang</td>
 								</tr>
 							<?php else: ?>
 								<?php foreach ($barang as $row): ?>
@@ -229,6 +233,43 @@ include __DIR__ . '/includes/header.php';
 										</td>
 										<td class="text-end">Rp <?php echo number_format($row['hargajual'], 0, ',', '.'); ?></td>
 										<td class="text-end"><?php echo number_format($row['discjual'], 2, ',', '.'); ?> %</td>
+										<td>
+											<?php 
+											$kondisiHargaClass = '';
+											$kondisiHargaText = '';
+											switch($row['kondisiharga'] ?? 'baru') {
+												case 'baru':
+													$kondisiHargaClass = 'bg-primary';
+													$kondisiHargaText = 'Baru';
+													break;
+												case 'normal':
+													$kondisiHargaClass = 'bg-secondary';
+													$kondisiHargaText = 'Normal';
+													break;
+												case 'promo':
+													$kondisiHargaClass = 'bg-info';
+													$kondisiHargaText = 'Promo';
+													break;
+												case 'sale':
+													$kondisiHargaClass = 'bg-danger';
+													$kondisiHargaText = 'Sale';
+													break;
+												case 'spesial':
+													$kondisiHargaClass = 'bg-warning';
+													$kondisiHargaText = 'Spesial';
+													break;
+												case 'deals':
+													$kondisiHargaClass = 'bg-success';
+													$kondisiHargaText = 'Deals';
+													break;
+												default:
+													$kondisiHargaClass = 'bg-primary';
+													$kondisiHargaText = 'Baru';
+													break;
+											}
+											?>
+											<span class="badge <?php echo $kondisiHargaClass; ?>"><?php echo $kondisiHargaText; ?></span>
+										</td>
 										<td class="text-center">
 											<span class="badge <?php echo $row['stokakhir'] > 0 ? 'bg-success' : 'bg-danger'; ?>">
 												<?php echo number_format($row['stokakhir'], 0, ',', '.'); ?>

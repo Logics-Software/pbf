@@ -115,6 +115,7 @@ if ($user['role'] === 'admin' || $user['role'] === 'operator') {
     $filterKandungan = isset($_GET['kandungan']) ? trim($_GET['kandungan']) : '';
     $filterKemasan = isset($_GET['kemasan']) ? trim($_GET['kemasan']) : '';
     $filterKondisiHarga = isset($_GET['kondisiharga']) ? trim($_GET['kondisiharga']) : '';
+    $sortBy = isset($_GET['sort']) ? trim($_GET['sort']) : 'terbaru';
     
     $whereConditions = ["status = 'aktif'", "stokakhir > 0"];
     $params = [];
@@ -151,11 +152,33 @@ if ($user['role'] === 'admin' || $user['role'] === 'operator') {
     }
     
     $whereClause = implode(' AND ', $whereConditions);
-    $sql = "SELECT kodebarang, namabarang, deskripsi, satuan, namapabrik, namagolongan, hargajual, discjual, kondisiharga, stokakhir, foto, supplier, kemasan, nie, kandungan FROM masterbarang WHERE $whereClause ORDER BY RAND()";
+    
+    // Determine sorting order
+    $orderBy = '';
+    switch($sortBy) {
+        case 'terlaris':
+            $orderBy = 'ORDER BY (hargajual * stokakhir) DESC'; // Best selling based on value
+            break;
+        case 'termurah':
+            $orderBy = 'ORDER BY hargajual ASC';
+            break;
+        case 'termahal':
+            $orderBy = 'ORDER BY hargajual DESC';
+            break;
+        case 'terbaru':
+        default:
+            $orderBy = 'ORDER BY RAND()';
+            break;
+    }
+    
+    $sql = "SELECT kodebarang, namabarang, deskripsi, satuan, namapabrik, namagolongan, hargajual, discjual, kondisiharga, stokakhir, foto, supplier, kemasan, nie, kandungan, created_at FROM masterbarang WHERE $whereClause $orderBy";
     
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $products = $stmt->fetchAll();
+    
+    // Randomize product order for better variety
+    shuffle($products);
     
     // Get sale products (max 12 items)
     $saleProducts = [];
@@ -183,6 +206,20 @@ if ($user['role'] === 'admin' || $user['role'] === 'operator') {
     if ($totalPromoProducts > 0) {
         $stmt = $pdo->query("SELECT kodebarang, namabarang, deskripsi, satuan, namapabrik, namagolongan, hargajual, discjual, kondisiharga, stokakhir, foto, supplier, kemasan, nie, kandungan FROM masterbarang WHERE status = 'aktif' AND stokakhir > 0 AND kondisiharga = 'promo' ORDER BY RAND()");
         $promoProducts = $stmt->fetchAll();
+    }
+    
+    // Get baru products (max 5 items)
+    $baruProducts = [];
+    $totalBaruProducts = 0;
+    
+    // Count total baru products
+    $stmt = $pdo->query("SELECT COUNT(*) FROM masterbarang WHERE status = 'aktif' AND stokakhir > 0 AND kondisiharga = 'baru'");
+    $totalBaruProducts = (int)$stmt->fetchColumn();
+    
+    // Get all baru products
+    if ($totalBaruProducts > 0) {
+        $stmt = $pdo->query("SELECT kodebarang, namabarang, deskripsi, satuan, namapabrik, namagolongan, hargajual, discjual, kondisiharga, stokakhir, foto, supplier, kemasan, nie, kandungan FROM masterbarang WHERE status = 'aktif' AND stokakhir > 0 AND kondisiharga = 'baru' ORDER BY RAND() LIMIT 5");
+        $baruProducts = $stmt->fetchAll();
     }
 } elseif ($user['role'] === 'manajemen') {
     // Get management-specific statistics and chart data
@@ -539,6 +576,76 @@ include __DIR__ . '/includes/header.php';
 	font-size: 0.65rem;
 	font-weight: 600;
 	box-shadow: 0 2px 4px rgba(129, 199, 132, 0.3);
+}
+.baru-badge {
+	position: absolute;
+	top: 10px;
+	left: 10px;
+	background: #ff00ff;
+	color: white;
+	padding: 3px 6px;
+	border-radius: 10px;
+	font-size: 0.65rem;
+	font-weight: 600;
+	box-shadow: 0 2px 4px rgba(255, 0, 255, 0.3);
+}
+
+/* Animation for Produk Baru section star icon */
+.baru-section-star {
+	animation: baruStarPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes baruStarPulse {
+	0% {
+		transform: scale(1) rotate(0deg);
+		opacity: 1;
+	}
+	25% {
+		transform: scale(1.1) rotate(5deg);
+		opacity: 0.9;
+	}
+	50% {
+		transform: scale(1.2) rotate(0deg);
+		opacity: 0.8;
+	}
+	75% {
+		transform: scale(1.1) rotate(-5deg);
+		opacity: 0.9;
+	}
+	100% {
+		transform: scale(1) rotate(0deg);
+		opacity: 1;
+	}
+}
+
+/* Shadow for Produk Baru section product images */
+.baru-section .product-image {
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+	transition: box-shadow 0.3s ease;
+}
+
+.baru-section .product-image:hover {
+	box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25);
+}
+
+/* Shadow for Flash Sale section product images */
+.flash-sale-section .product-image {
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+	transition: box-shadow 0.3s ease;
+}
+
+.flash-sale-section .product-image:hover {
+	box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25);
+}
+
+/* Shadow for Promo section product images */
+.promo-section .product-image {
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+	transition: box-shadow 0.3s ease;
+}
+
+.promo-section .product-image:hover {
+	box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25);
 }
 .stock-badge {
     position: absolute;
@@ -1237,8 +1344,8 @@ include __DIR__ . '/includes/header.php';
 
 
             <!-- Sale Products Section -->
-            <?php if (isset($saleProducts) && !empty($saleProducts)): ?>
-            <div class="row g-2 mb-4 pt-2 pb-3 px-3" style="background: linear-gradient(135deg, #e8f5e8 0%, #f0f8f0 100%); border-radius: 15px; border: 2px solid #d4edda;">
+            <?php if (isset($saleProducts) && !empty($saleProducts) && empty($searchQuery) && empty($filterPabrik) && empty($filterGolongan) && empty($filterKandungan) && empty($filterKemasan) && empty($filterKondisiHarga)): ?>
+            <div class="row g-2 mb-4 pt-2 pb-3 px-3 flash-sale-section" style="background: linear-gradient(135deg, #e8f5e8 0%, #f0f8f0 100%); border-radius: 15px; border: 2px solid #d4edda;">
                 <div class="col-12">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h4 class="mb-0"><i class="fas fa-fire text-danger me-2" style="animation: fireFlicker 1.5s ease-in-out infinite alternate;"></i>Flash Sale</h4>
@@ -1266,7 +1373,8 @@ include __DIR__ . '/includes/header.php';
                         <div id="flashSaleSlider" style="display: flex; transition: transform 0.3s ease-in-out;">
                             <?php 
                             $chunks = array_chunk($saleProducts, 6);
-                            foreach ($chunks as $chunkIndex => $chunk): 
+                            foreach ($chunks as $chunkIndex => $chunk):
+                                shuffle($chunk); // Randomize order within each chunk 
                             ?>
                             <div class="flash-sale-slide" style="min-width: 100%; display: flex; flex-wrap: wrap; gap: 15px;">
                                 <?php foreach ($chunk as $product): 
@@ -1316,7 +1424,7 @@ include __DIR__ . '/includes/header.php';
                                         <div class="product-price" style="font-size: 0.85rem; color: #dc3545; font-weight: 600;">Rp <?php echo number_format($product['hargajual'], 0, ',', '.'); ?></div>
                                     <?php endif; ?>
                                 </div>
-                                <button class="btn btn-success btn-sm" style="padding: 0.25rem 0.5rem; font-size: 0.7rem;" onclick="event.stopPropagation(); addToCart('<?php echo $product['kodebarang']; ?>')">
+                                <button class="btn btn-sm" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; background-color: <?php echo ($product['kondisiharga'] === 'baru') ? '#dc3545' : '#28a745'; ?>; border-color: <?php echo ($product['kondisiharga'] === 'baru') ? '#dc3545' : '#28a745'; ?>; color: white;" onclick="event.stopPropagation(); addToCart('<?php echo $product['kodebarang']; ?>')">
                                     <i class="fas fa-cart-plus"></i>
                                 </button>
                             </div>
@@ -1333,8 +1441,8 @@ include __DIR__ . '/includes/header.php';
             <?php endif; ?>
 
             <!-- Promo Products Section -->
-            <?php if (isset($promoProducts) && !empty($promoProducts)): ?>
-            <div class="row g-2 mb-4 pt-2 pb-3 px-3" style="background: linear-gradient(135deg, #fff8dc 0%, #f5f5dc 100%); border-radius: 15px; border: 2px solid #f9e79f;">
+            <?php if (isset($promoProducts) && !empty($promoProducts) && empty($searchQuery) && empty($filterPabrik) && empty($filterGolongan) && empty($filterKandungan) && empty($filterKemasan) && empty($filterKondisiHarga)): ?>
+            <div class="row g-2 mb-4 pt-2 pb-3 px-3 promo-section" style="background: linear-gradient(135deg, #fff8dc 0%, #f5f5dc 100%); border-radius: 15px; border: 2px solid #f9e79f;">
                 <div class="col-12">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h4 class="mb-0"><i class="fas fa-gift text-warning me-2" style="animation: giftBounce 2s ease-in-out infinite;"></i>Special Promo</h4>
@@ -1362,7 +1470,8 @@ include __DIR__ . '/includes/header.php';
                         <div id="promoSlider" style="display: flex; transition: transform 0.3s ease-in-out;">
                             <?php 
                             $promoChunks = array_chunk($promoProducts, 6);
-                            foreach ($promoChunks as $chunkIndex => $chunk): 
+                            foreach ($promoChunks as $chunkIndex => $chunk):
+                                shuffle($chunk); // Randomize order within each chunk 
                             ?>
                             <div class="promo-slide" style="min-width: 100%; display: flex; flex-wrap: wrap; gap: 15px;">
                                 <?php foreach ($chunk as $product): 
@@ -1412,7 +1521,7 @@ include __DIR__ . '/includes/header.php';
                                         <div class="product-price" style="font-size: 0.85rem; color: #007bff; font-weight: 600;">Rp <?php echo number_format($product['hargajual'], 0, ',', '.'); ?></div>
                                     <?php endif; ?>
                                 </div>
-                                <button class="btn btn-sm" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; background-color: #f39c12; border-color: #f39c12; color: white;" onclick="event.stopPropagation(); addToCart('<?php echo $product['kodebarang']; ?>')">
+                                <button class="btn btn-sm" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; background-color: <?php echo ($product['kondisiharga'] === 'baru') ? '#dc3545' : '#f39c12'; ?>; border-color: <?php echo ($product['kondisiharga'] === 'baru') ? '#dc3545' : '#f39c12'; ?>; color: white;" onclick="event.stopPropagation(); addToCart('<?php echo $product['kodebarang']; ?>')">
                                     <i class="fas fa-cart-plus"></i>
                                 </button>
                             </div>
@@ -1422,6 +1531,144 @@ include __DIR__ . '/includes/header.php';
                                 <?php endforeach; ?>
                             </div>
                             <?php endforeach; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- Baru Products Section -->
+            <?php if (isset($baruProducts) && !empty($baruProducts) && empty($searchQuery) && empty($filterPabrik) && empty($filterGolongan) && empty($filterKandungan) && empty($filterKemasan) && empty($filterKondisiHarga)): ?>
+            <div class="row g-2 mb-4 pt-2 pb-3 px-3 baru-section" style="background: linear-gradient(135deg, #e6f3ff 0%, #f0f8ff 100%); border-radius: 15px; border: 2px solid #b0e0e6;">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex align-items-center">
+                            <h4 class="mb-0 me-3" style="color: #1e3a8a; font-weight: 700;">
+                                <i class="fas fa-star me-2 baru-section-star" style="color: #3b82f6;"></i>Produk Baru
+                            </h4>
+                        </div>
+                        <?php if ($totalBaruProducts > 5): ?>
+                            <a href="dashboard.php?kondisiharga=baru" class="btn btn-primary btn-sm">
+                                <i class="fas fa-eye me-1"></i>Lihat Semua
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <div class="row g-3">
+                        <!-- Large Card (First Product) -->
+                        <?php if (!empty($baruProducts[0])): 
+                            $product = $baruProducts[0];
+                            $fotos = json_decode($product['foto'], true);
+                            $mainImage = (!empty($fotos) && !empty($fotos[0]) && file_exists($fotos[0])) ? $fotos[0] : 'assets/img/no-image.svg';
+                            $discountPrice = $product['hargajual'] - ($product['hargajual'] * $product['discjual'] / 100);
+                            $hasDiscount = $product['discjual'] > 0;
+                        ?>
+                        <div class="col-lg-6 col-md-6">
+                            <div class="card product-card h-100" style="cursor: pointer; border: none; padding: 15px;" onclick="window.location.href='customer_product_detail.php?kodebarang=<?php echo $product['kodebarang']; ?>'">
+                                <div class="position-relative">
+                                    <img src="assets/img/no-image.svg" 
+                                         data-src="<?php echo htmlspecialchars($mainImage); ?>" 
+                                         alt="<?php echo htmlspecialchars($product['namabarang']); ?>"
+                                         class="product-image lazy" style="height: 280px; object-fit: cover;">
+                                    
+                                    <span class="stock-badge">Stok: <?php echo number_format($product['stokakhir']); ?></span>
+                                </div>
+                                <div class="card-body p-3">
+                                    <h5 class="product-title mb-2" style="font-size: 1.3rem; line-height: 1.3; font-weight: 600;"><?php echo htmlspecialchars($product['namabarang']); ?></h5>
+                                    <p class="product-info mb-2" style="font-size: 0.95rem; color: #6c757d; font-weight: 500;">
+                                        <?php 
+                                        $infoParts = [];
+                                        if (!empty($product['namapabrik'])) {
+                                            $infoParts[] = htmlspecialchars($product['namapabrik']);
+                                        }
+                                        if (!empty($product['namagolongan'])) {
+                                            $infoParts[] = htmlspecialchars($product['namagolongan']);
+                                        }
+                                        if (!empty($product['satuan'])) {
+                                            $infoParts[] = htmlspecialchars($product['satuan']);
+                                        }
+                                        echo implode(' / ', $infoParts);
+                                        ?>
+                                    </p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <?php if ($hasDiscount): ?>
+                                                <div class="product-price" style="font-size: 1.4rem; color: #dc3545; font-weight: 700;">Rp <?php echo number_format($discountPrice, 0, ',', '.'); ?></div>
+                                                <div class="product-price-original" style="font-size: 1rem; color: #6c757d; text-decoration: line-through;">Rp <?php echo number_format($product['hargajual'], 0, ',', '.'); ?></div>
+                                            <?php else: ?>
+                                                <div class="product-price" style="font-size: 1.4rem; color: #1e3a8a; font-weight: 700;">Rp <?php echo number_format($product['hargajual'], 0, ',', '.'); ?></div>
+                                            <?php endif; ?>
+                                        </div>
+                                        <button class="btn btn-sm" style="background-color: #dc3545; border-color: #dc3545; color: white;" onclick="event.stopPropagation(); addToCart('<?php echo $product['kodebarang']; ?>')">
+                                            <i class="fas fa-cart-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <!-- Two Cards with 2 Rows Each (Products 2-5) -->
+                        <div class="col-lg-6 col-md-6">
+                            <div class="row g-2 h-100">
+                                <?php for ($i = 1; $i < min(5, count($baruProducts)); $i += 2): ?>
+                                <div class="col-12">
+                                    <div class="row g-2">
+                                        <?php for ($j = $i; $j < min($i + 2, min(5, count($baruProducts))); $j++): 
+                                            $product = $baruProducts[$j];
+                                            $fotos = json_decode($product['foto'], true);
+                                            $mainImage = (!empty($fotos) && !empty($fotos[0]) && file_exists($fotos[0])) ? $fotos[0] : 'assets/img/no-image.svg';
+                                            $discountPrice = $product['hargajual'] - ($product['hargajual'] * $product['discjual'] / 100);
+                                            $hasDiscount = $product['discjual'] > 0;
+                                        ?>
+                                        <div class="col-6">
+                                            <div class="card product-card h-100" style="cursor: pointer; border: none; padding: 10px;" onclick="window.location.href='customer_product_detail.php?kodebarang=<?php echo $product['kodebarang']; ?>'">
+                                                <div class="position-relative">
+                                                    <img src="assets/img/no-image.svg" 
+                                                         data-src="<?php echo htmlspecialchars($mainImage); ?>" 
+                                                         alt="<?php echo htmlspecialchars($product['namabarang']); ?>"
+                                                         class="product-image lazy" style="height: 100px; object-fit: cover;">
+                                                    
+                                                    <span class="stock-badge" style="font-size: 0.5rem; padding: 1px 3px;">Stok: <?php echo number_format($product['stokakhir']); ?></span>
+                                                </div>
+                                                <div class="card-body p-2">
+                                                    <h6 class="product-title mb-1" style="font-size: 0.95rem; line-height: 1.2; font-weight: 600;"><?php echo htmlspecialchars($product['namabarang']); ?></h6>
+                                                    <p class="product-info mb-1" style="font-size: 0.8rem; color: #6c757d; font-weight: 500;">
+                                                        <?php 
+                                                        $infoParts = [];
+                                                        if (!empty($product['namapabrik'])) {
+                                                            $infoParts[] = htmlspecialchars($product['namapabrik']);
+                                                        }
+                                                        if (!empty($product['namagolongan'])) {
+                                                            $infoParts[] = htmlspecialchars($product['namagolongan']);
+                                                        }
+                                                        if (!empty($product['satuan'])) {
+                                                            $infoParts[] = htmlspecialchars($product['satuan']);
+                                                        }
+                                                        echo implode(' / ', $infoParts);
+                                                        ?>
+                                                    </p>
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <div>
+                                                            <?php if ($hasDiscount): ?>
+                                                                <div class="product-price" style="font-size: 1rem; color: #dc3545; font-weight: 700;">Rp <?php echo number_format($discountPrice, 0, ',', '.'); ?></div>
+                                                                <div class="product-price-original" style="font-size: 0.8rem; color: #6c757d; text-decoration: line-through;">Rp <?php echo number_format($product['hargajual'], 0, ',', '.'); ?></div>
+                                                            <?php else: ?>
+                                                                <div class="product-price" style="font-size: 1rem; color: #1e3a8a; font-weight: 700;">Rp <?php echo number_format($product['hargajual'], 0, ',', '.'); ?></div>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                        <button class="btn btn-sm" style="padding: 0.2rem 0.4rem; font-size: 0.6rem; background-color: #dc3545; border-color: #dc3545; color: white;" onclick="event.stopPropagation(); addToCart('<?php echo $product['kodebarang']; ?>')">
+                                                            <i class="fas fa-cart-plus"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <?php endfor; ?>
+                                    </div>
+                                </div>
+                                <?php endfor; ?>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1441,7 +1688,20 @@ include __DIR__ . '/includes/header.php';
                         <?php else: ?>
                             <h4 class="mb-0"><i class="fas fa-shopping-bag"></i> Semua Produk</h4>
                         <?php endif; ?>
-                        <span class="badge bg-primary fs-6"><?php echo count($products); ?> Produk Tersedia</span>
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="badge bg-primary fs-6"><?php echo count($products); ?> Produk Tersedia</span>
+                            <?php if ($hasFilters): ?>
+                            <div class="d-flex align-items-center gap-2">
+                                <label class="form-label mb-0" style="font-size: 0.9rem; font-weight: 500; color: #007bff;"><i class="fas fa-sort-amount-down me-1"></i>Urutkan:</label>
+                                <select class="form-select form-select-sm" style="width: auto; min-width: 120px; font-weight: bold;" onchange="applySorting(this.value)">
+                                    <option value="terbaru" <?php echo $sortBy === 'terbaru' ? 'selected' : ''; ?>>Terbaru</option>
+                                    <option value="terlaris" <?php echo $sortBy === 'terlaris' ? 'selected' : ''; ?>>Terlaris</option>
+                                    <option value="termurah" <?php echo $sortBy === 'termurah' ? 'selected' : ''; ?>>Termurah</option>
+                                    <option value="termahal" <?php echo $sortBy === 'termahal' ? 'selected' : ''; ?>>Termahal</option>
+                                </select>
+                            </div>
+                            <?php endif; ?>
+                        </div>
                     </div>
                     
                     <?php if ($hasFilters): ?>
@@ -1480,9 +1740,9 @@ include __DIR__ . '/includes/header.php';
                                         <button type="button" class="btn-close" style="font-size: 1em; padding: 0.4em;" onclick="removeFilter('kondisiharga')" title="Hapus filter kondisi harga"></button>
                                     </span>
                                 <?php endif; ?>
-                                <a href="dashboard.php<?php echo !empty($searchQuery) ? '?search=' . urlencode($searchQuery) : ''; ?>" class="btn btn-clear-filters btn-sm">
+                                <button type="button" class="btn btn-clear-filters btn-sm" onclick="clearAllFiltersAndSearch()">
                                     <i class="fas fa-times me-1"></i>Hapus Semua Filter
-                                </a>
+                                </button>
                             </div>
                         </div>
                     <?php endif; ?>
@@ -1512,6 +1772,10 @@ include __DIR__ . '/includes/header.php';
                                 $badgeText = '';
                                 
                                 switch($kondisi) {
+                                    case 'baru':
+                                        $badgeClass = 'baru-badge';
+                                        $badgeText = '<i class="fas fa-star me-1"></i>BARU';
+                                        break;
                                     case 'promo':
                                         $badgeClass = 'promo-badge';
                                         $badgeText = 'PROMO';
@@ -1564,7 +1828,7 @@ include __DIR__ . '/includes/header.php';
                                         <div class="product-price">Rp <?php echo number_format($product['hargajual'], 0, ',', '.'); ?></div>
                                     <?php endif; ?>
                                 </div>
-                                <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); addToCart('<?php echo $product['kodebarang']; ?>')">
+                                <button class="btn btn-sm" style="background-color: <?php echo ($product['kondisiharga'] === 'baru') ? '#dc3545' : '#007bff'; ?>; border-color: <?php echo ($product['kondisiharga'] === 'baru') ? '#dc3545' : '#007bff'; ?>; color: white;" onclick="event.stopPropagation(); addToCart('<?php echo $product['kodebarang']; ?>')">
                                     <i class="fas fa-cart-plus"></i>
                                 </button>
                             </div>
@@ -1828,6 +2092,43 @@ function clearFilters() {
         url.search = '';
     }
     
+    window.location.href = url.toString();
+}
+
+// Clear all filters and search, then refresh page
+function clearAllFiltersAndSearch() {
+    // Clear all search form inputs
+    const searchInputs = document.querySelectorAll('input[name="search"]');
+    searchInputs.forEach(input => {
+        input.value = '';
+    });
+    
+    // Clear all URL parameters and refresh
+    window.location.href = 'dashboard.php';
+}
+
+// Apply sorting to filtered results
+function applySorting(sortValue) {
+    const url = new URL(window.location);
+    
+    // Preserve all existing parameters
+    const currentParams = new URLSearchParams(window.location.search);
+    
+    // Set the new sort parameter
+    if (sortValue && sortValue !== 'terbaru') {
+        url.searchParams.set('sort', sortValue);
+    } else {
+        url.searchParams.delete('sort');
+    }
+    
+    // Preserve all other existing parameters
+    for (const [key, val] of currentParams.entries()) {
+        if (key !== 'sort') {
+            url.searchParams.set(key, val);
+        }
+    }
+    
+    // Redirect to sorted page
     window.location.href = url.toString();
 }
 

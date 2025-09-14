@@ -697,6 +697,22 @@ if ($user && $user['role'] === 'customer') {
 			background-color: rgba(0, 123, 255, 0.1);
 		}
 		
+		/* Account menu styling for Customer role - no border, same background as other items */
+		#mobileProfileBtn {
+			border: none !important;
+			background-color: transparent !important;
+		}
+		
+		#mobileProfileBtn:hover {
+			border: none !important;
+			background-color: rgba(0, 123, 255, 0.05) !important;
+		}
+		
+		#mobileProfileBtn.active {
+			border: none !important;
+			background-color: rgba(0, 123, 255, 0.1) !important;
+		}
+		
 		/* Mobile Navbar Styles for Non-Customer Roles */
 		@media (max-width: 991.98px) {
 			/* Ensure navbar is properly styled on mobile */
@@ -801,6 +817,25 @@ if ($user && $user['role'] === 'customer') {
 			.navbar-nav .dropdown-menu-end {
 				right: 0;
 				left: auto;
+			}
+			
+			/* Ensure user dropdown is visible on desktop */
+			#userDropdown + .dropdown-menu {
+				display: none;
+				position: absolute;
+				top: 100%;
+				right: 0;
+				left: auto;
+				z-index: 1000;
+				min-width: 200px;
+				background-color: #fff;
+				border: 1px solid rgba(0,0,0,.15);
+				border-radius: 0.375rem;
+				box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.175);
+			}
+			
+			#userDropdown + .dropdown-menu.show {
+				display: block !important;
 			}
 			
 			/* Ensure dropdown positioning works correctly */
@@ -988,7 +1023,7 @@ if ($user && $user['role'] === 'customer') {
 						</li>
 					<?php endif; ?>
 					<li class="nav-item dropdown">
-						<a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" aria-expanded="false">
+						<a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
 							<i class="fas fa-user me-1"></i>Halo, <?php echo htmlspecialchars($user['namalengkap']); ?>
 						</a>
 						<ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
@@ -1627,8 +1662,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const dropdownToggles = document.querySelectorAll('.navbar-nav .dropdown-toggle');
         console.log('Found dropdown toggles:', dropdownToggles.length);
         
+        // User dropdown is now handled by Bootstrap with data-bs-toggle="dropdown"
+        
         dropdownToggles.forEach((toggle, index) => {
             console.log(`Setting up dropdown toggle ${index + 1}:`, toggle);
+            
+            // Skip user dropdown as it's handled by Bootstrap
+            if (toggle.id === 'userDropdown') {
+                console.log('Skipping user dropdown as it\'s handled by Bootstrap');
+                return;
+            }
             
             toggle.addEventListener('click', function(e) {
                 console.log('Dropdown toggle clicked:', this);
@@ -1681,6 +1724,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 retryDropdownToggles.forEach((toggle, index) => {
                     console.log(`Setting up retry dropdown toggle ${index + 1}:`, toggle);
+                    
+                    // Skip user dropdown as it's handled by Bootstrap
+                    if (toggle.id === 'userDropdown') {
+                        console.log('Skipping user dropdown in retry as it\'s handled by Bootstrap');
+                        return;
+                    }
                     
                     toggle.addEventListener('click', function(e) {
                         console.log('Retry dropdown toggle clicked:', this);

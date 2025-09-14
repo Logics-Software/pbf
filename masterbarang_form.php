@@ -30,7 +30,7 @@ $data = [
 	'discbeli' => '0',
 	'hargajual' => '0',
 	'discjual' => '0',
-	'kondisiharga' => 'normal',
+	'kondisiharga' => 'baru',
 	'stokakhir' => '0',
 	'foto' => '',
 	'status' => 'aktif',
@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	$data['discbeli'] = (float)($_POST['discbeli'] ?? 0);
 	$data['hargajual'] = (float)($_POST['hargajual'] ?? 0);
 	$data['discjual'] = (float)($_POST['discjual'] ?? 0);
-	$data['kondisiharga'] = $_POST['kondisiharga'] ?? 'normal';
+	$data['kondisiharga'] = $_POST['kondisiharga'] ?? 'baru';
 	$data['stokakhir'] = (int)($_POST['stokakhir'] ?? 0);
 	$data['foto'] = trim($_POST['foto'] ?? '');
 	$data['status'] = $_POST['status'] ?? 'aktif';
@@ -205,6 +205,7 @@ include __DIR__ . '/includes/header.php';
 							<select name="kondisiharga" class="form-select" required>
 								<?php 
 								$kondisiOptions = [
+									'baru' => 'Baru',
 									'normal' => 'Normal',
 									'promo' => 'Promo',
 									'sale' => 'Sale',
