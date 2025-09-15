@@ -4,7 +4,7 @@
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'pbf');
 define('DB_USER', 'root');
-define('DB_PASS', '');
+define('DB_PASS', '051199');
 
 // App settings
 define('APP_NAME', 'Farmasi Online');

@@ -14,7 +14,7 @@ if (isset($_GET['msg'])) {
 		case 'created': $msg = '<div class="alert alert-success">Customer berhasil ditambahkan</div>'; break;
 		case 'saved': $msg = '<div class="alert alert-success">Customer berhasil diupdate</div>'; break;
 		case 'deleted': $msg = '<div class="alert alert-success">Customer berhasil dihapus</div>'; break;
-		case 'used_in_transaction': $msg = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-2"></i><strong>Tidak bisa dihapus!</strong> Data customer telah digunakan dalam transaksi order. Lakukan penonaktifkan jika data sudah tidak digunakan.</div>'; break;
+		case 'used_in_transaction': $msg = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-2"></i><strong>Tidak bisa dihapus!</strong> Data customer telah digunakan dalam transaksi. Lakukan penonaktifkan jika data sudah tidak digunakan.</div>'; break;
 		case 'error': $msg = '<div class="alert alert-danger">Terjadi kesalahan</div>'; break;
 	}
 }
@@ -396,7 +396,7 @@ function showWarningMessage(name, code) {
                     </div>
                     <div class="alert alert-danger">
                         <i class="fas fa-exclamation-circle me-2"></i>
-                        <strong>Alasan:</strong> Data customer telah digunakan dalam transaksi order.<br>
+                        <strong>Alasan:</strong> Data customer telah digunakan dalam transaksi.<br>
                         Lakukan penonaktifkan jika data sudah tidak digunakan.
                     </div>
                 </div>
