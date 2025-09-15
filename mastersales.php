@@ -14,6 +14,7 @@ if (isset($_GET['msg'])) {
 		case 'created': $msg = '<div class="alert alert-success">Sales berhasil ditambahkan</div>'; break;
 		case 'saved': $msg = '<div class="alert alert-success">Sales berhasil diupdate</div>'; break;
 		case 'deleted': $msg = '<div class="alert alert-success">Sales berhasil dihapus</div>'; break;
+		case 'used_in_transaction': $msg = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-2"></i><strong>Tidak bisa dihapus!</strong> Data sales telah digunakan dalam transaksi order. Lakukan penonaktifkan jika data sudah tidak digunakan.</div>'; break;
 		case 'error': $msg = '<div class="alert alert-danger">Terjadi kesalahan</div>'; break;
 	}
 }
@@ -156,12 +157,12 @@ include __DIR__ . '/includes/header.php';
 														<path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708L6.5 12.5a.5.5 0 0 1-.5.5H2a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .146-.354L12.146.146zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
 													</svg>
 												</a>
-												<a href="mastersales_delete.php?id=<?php echo $row['id']; ?>" class="btn btn-outline-danger" title="Hapus" onclick="return confirm('Yakin hapus sales ini?')">
+												<button class="btn btn-outline-danger" title="Hapus" onclick="showDeleteConfirm('<?php echo $row['id']; ?>', '<?php echo htmlspecialchars($row['namasales']); ?>', '<?php echo htmlspecialchars($row['kodesales']); ?>')">
 													<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
 														<path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
 														<path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
 													</svg>
-												</a>
+												</button>
 											</div>
 										</td>
 									</tr>
@@ -201,5 +202,138 @@ include __DIR__ . '/includes/header.php';
 		<?php endif; ?>
 	</div>
 </div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered">
+		<div class="modal-content">
+			<div class="modal-header bg-danger text-white">
+				<h5 class="modal-title" id="deleteConfirmModalLabel">
+					<i class="fas fa-exclamation-triangle me-2"></i>Konfirmasi Hapus
+				</h5>
+				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="text-center mb-3">
+					<i class="fas fa-trash-alt text-danger" style="font-size: 3rem;"></i>
+				</div>
+				<h6 class="text-center mb-3">Apakah Anda yakin ingin menghapus sales ini?</h6>
+				<div class="alert alert-warning">
+					<strong>Detail Sales:</strong><br>
+					<strong>Kode:</strong> <span id="deleteItemCode"></span><br>
+					<strong>Nama:</strong> <span id="deleteItemName"></span>
+				</div>
+				<div class="alert alert-danger">
+					<i class="fas fa-exclamation-circle me-2"></i>
+					<strong>Peringatan:</strong> Tindakan ini tidak dapat dibatalkan!
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+					<i class="fas fa-times me-1"></i>Batal
+				</button>
+				<button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+					<i class="fas fa-trash me-1"></i>Ya, Hapus
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script>
+// Delete Confirmation Modal Functionality
+let deleteItemId = null;
+
+function showDeleteConfirm(id, name, code) {
+    // Check if sales is used in transactions first
+    fetch(`api/check_sales_usage.php?kodesales=${encodeURIComponent(code)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (data.used_in_transaction) {
+                    // Show warning message instead of delete modal
+                    showWarningMessage(name, code);
+                } else {
+                    // Safe to delete, show confirmation modal
+                    deleteItemId = id;
+                    document.getElementById('deleteItemCode').textContent = code;
+                    document.getElementById('deleteItemName').textContent = name;
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+                    modal.show();
+                }
+            } else {
+                alert('Terjadi kesalahan saat memeriksa data sales: ' + (data.message || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Terjadi kesalahan saat memeriksa data sales');
+        });
+}
+
+function showWarningMessage(name, code) {
+    // Create centered warning modal
+    const modalDiv = document.createElement('div');
+    modalDiv.className = 'modal fade show';
+    modalDiv.style.cssText = 'display: block; background-color: rgba(0,0,0,0.5); z-index: 9999;';
+    modalDiv.innerHTML = `
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Peringatan
+                    </h5>
+                    <button type="button" class="btn-close" onclick="closeWarningModal()" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-ban text-warning" style="font-size: 3rem;"></i>
+                    </div>
+                    <h6 class="mb-3">Tidak bisa dihapus!</h6>
+                    <div class="alert alert-warning">
+                        <strong>Detail Sales:</strong><br>
+                        <strong>Nama:</strong> ${name}<br>
+                        <strong>Kode:</strong> ${code}
+                    </div>
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        <strong>Alasan:</strong> Data sales telah digunakan dalam transaksi order.<br>
+                        Lakukan penonaktifkan jika data sudah tidak digunakan.
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <button type="button" class="btn btn-warning" onclick="closeWarningModal()">
+                        <i class="fas fa-check me-1"></i>Mengerti
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add to body
+    document.body.appendChild(modalDiv);
+    
+    // Auto remove after 10 seconds
+    setTimeout(() => {
+        closeWarningModal();
+    }, 10000);
+}
+
+function closeWarningModal() {
+    const modal = document.querySelector('.modal.show');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// Handle delete confirmation
+document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+    if (deleteItemId) {
+        // Redirect to delete page
+        window.location.href = 'mastersales_delete.php?id=' + deleteItemId;
+    }
+});
+</script>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>

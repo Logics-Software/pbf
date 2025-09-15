@@ -8,6 +8,17 @@ if (!can_access('users')) {
 }
 $pdo = get_pdo_connection();
 
+$msg = '';
+if (isset($_GET['msg'])) {
+	switch ($_GET['msg']) {
+		case 'created': $msg = '<div class="alert alert-success">User berhasil ditambahkan</div>'; break;
+		case 'saved': $msg = '<div class="alert alert-success">User berhasil diupdate</div>'; break;
+		case 'deleted': $msg = '<div class="alert alert-success">User berhasil dihapus</div>'; break;
+		case 'used_in_transaction': $msg = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-2"></i><strong>Tidak bisa dihapus!</strong> Data user telah digunakan dalam transaksi order. Lakukan penonaktifkan jika data sudah tidak digunakan.</div>'; break;
+		case 'error': $msg = '<div class="alert alert-danger">Terjadi kesalahan</div>'; break;
+	}
+}
+
 // Delete (soft through status toggle? Here hard delete on request)
 if (isset($_GET['delete'])) {
 	$id = (int)$_GET['delete'];
@@ -48,6 +59,8 @@ include __DIR__ . '/includes/header.php';
 		<h3 class="mb-0">Users</h3>
 		<a href="user_form.php" class="btn btn-primary">Tambah User</a>
 	</div>
+	
+	<?php echo $msg; ?>
 
 	<form class="row g-2 align-items-end mb-3" method="get" action="">
 		<div class="col-md-6">
@@ -91,7 +104,7 @@ include __DIR__ . '/includes/header.php';
 						</td>
 						<td>
 							<a class="btn btn-sm btn-warning" href="user_form.php?id=<?php echo (int)$r['id']; ?>">Edit</a>
-							<a class="btn btn-sm btn-danger" href="users.php?delete=<?php echo (int)$r['id']; ?>" onclick="return confirm('Hapus user ini?');">Hapus</a>
+							<button class="btn btn-sm btn-danger" onclick="showDeleteConfirm('<?php echo $r['id']; ?>', '<?php echo htmlspecialchars($r['namalengkap']); ?>', '<?php echo htmlspecialchars($r['username']); ?>')">Hapus</button>
 						</td>
 					</tr>
 				<?php endforeach; endif; ?>
@@ -111,6 +124,140 @@ include __DIR__ . '/includes/header.php';
 	</nav>
 	<?php endif; ?>
 </div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered">
+		<div class="modal-content">
+			<div class="modal-header bg-danger text-white">
+				<h5 class="modal-title" id="deleteConfirmModalLabel">
+					<i class="fas fa-exclamation-triangle me-2"></i>Konfirmasi Hapus
+				</h5>
+				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="text-center mb-3">
+					<i class="fas fa-trash-alt text-danger" style="font-size: 3rem;"></i>
+				</div>
+				<h6 class="text-center mb-3">Apakah Anda yakin ingin menghapus user ini?</h6>
+				<div class="alert alert-warning">
+					<strong>Detail User:</strong><br>
+					<strong>Username:</strong> <span id="deleteItemCode"></span><br>
+					<strong>Nama:</strong> <span id="deleteItemName"></span>
+				</div>
+				<div class="alert alert-danger">
+					<i class="fas fa-exclamation-circle me-2"></i>
+					<strong>Peringatan:</strong> Tindakan ini tidak dapat dibatalkan!
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+					<i class="fas fa-times me-1"></i>Batal
+				</button>
+				<button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+					<i class="fas fa-trash me-1"></i>Ya, Hapus
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script>
+// Delete Confirmation Modal Functionality
+let deleteItemId = null;
+
+function showDeleteConfirm(id, name, username) {
+    // Check if user is used in transactions first
+    fetch(`api/check_user_usage.php?iduser=${encodeURIComponent(id)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (data.used_in_transaction) {
+                    // Show warning message instead of delete modal
+                    showWarningMessage(name, username);
+                } else {
+                    // Safe to delete, show confirmation modal
+                    deleteItemId = id;
+                    document.getElementById('deleteItemCode').textContent = username;
+                    document.getElementById('deleteItemName').textContent = name;
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+                    modal.show();
+                }
+            } else {
+                alert('Terjadi kesalahan saat memeriksa data user: ' + (data.message || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Terjadi kesalahan saat memeriksa data user');
+        });
+}
+
+function showWarningMessage(name, username) {
+    // Create centered warning modal
+    const modalDiv = document.createElement('div');
+    modalDiv.className = 'modal fade show';
+    modalDiv.style.cssText = 'display: block; background-color: rgba(0,0,0,0.5); z-index: 9999;';
+    modalDiv.innerHTML = `
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Peringatan
+                    </h5>
+                    <button type="button" class="btn-close" onclick="closeWarningModal()" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-ban text-warning" style="font-size: 3rem;"></i>
+                    </div>
+                    <h6 class="mb-3">Tidak bisa dihapus!</h6>
+                    <div class="alert alert-warning">
+                        <strong>Detail User:</strong><br>
+                        <strong>Nama:</strong> ${name}<br>
+                        <strong>Username:</strong> ${username}
+                    </div>
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        <strong>Alasan:</strong> Data user telah digunakan dalam transaksi order.<br>
+                        Lakukan penonaktifkan jika data sudah tidak digunakan.
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <button type="button" class="btn btn-warning" onclick="closeWarningModal()">
+                        <i class="fas fa-check me-1"></i>Mengerti
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add to body
+    document.body.appendChild(modalDiv);
+    
+    // Auto remove after 10 seconds
+    setTimeout(() => {
+        closeWarningModal();
+    }, 10000);
+}
+
+function closeWarningModal() {
+    const modal = document.querySelector('.modal.show');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// Handle delete confirmation
+document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+    if (deleteItemId) {
+        // Redirect to delete page
+        window.location.href = 'users.php?delete=' + deleteItemId;
+    }
+});
+</script>
+
 <?php include __DIR__ . '/includes/footer.php'; ?>
 
 

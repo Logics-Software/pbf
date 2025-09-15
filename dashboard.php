@@ -833,6 +833,13 @@ include __DIR__ . '/includes/header.php';
 .badge-selected-category:hover .btn-close {
     filter: brightness(0) invert(1);
 }
+
+/* Hide product count badge on mobile */
+@media (max-width: 768px) {
+    .product-count-badge {
+        display: none !important;
+    }
+}
 </style>
 
 <div class="flex-grow-1">
@@ -1569,7 +1576,7 @@ include __DIR__ . '/includes/header.php';
                                     <img src="assets/img/no-image.svg" 
                                          data-src="<?php echo htmlspecialchars($mainImage); ?>" 
                                          alt="<?php echo htmlspecialchars($product['namabarang']); ?>"
-                                         class="product-image lazy" style="height: 280px; object-fit: cover;">
+                                         class="product-image lazy" style="height: 320px; object-fit: cover;">
                                     
                                     <span class="stock-badge">Stok: <?php echo number_format($product['stokakhir']); ?></span>
                                 </div>
@@ -1627,7 +1634,7 @@ include __DIR__ . '/includes/header.php';
                                                     <img src="assets/img/no-image.svg" 
                                                          data-src="<?php echo htmlspecialchars($mainImage); ?>" 
                                                          alt="<?php echo htmlspecialchars($product['namabarang']); ?>"
-                                                         class="product-image lazy" style="height: 100px; object-fit: cover;">
+                                                         class="product-image lazy" style="height: 120px; object-fit: cover;">
                                                     
                                                     <span class="stock-badge" style="font-size: 0.5rem; padding: 1px 3px;">Stok: <?php echo number_format($product['stokakhir']); ?></span>
                                                 </div>
@@ -1689,7 +1696,7 @@ include __DIR__ . '/includes/header.php';
                             <h4 class="mb-0"><i class="fas fa-shopping-bag"></i> Semua Produk</h4>
                         <?php endif; ?>
                         <div class="d-flex align-items-center gap-3">
-                            <span class="badge bg-primary fs-6"><?php echo count($products); ?> Produk Tersedia</span>
+                            <span class="badge bg-primary fs-6 product-count-badge"><?php echo count($products); ?> Produk Tersedia</span>
                             <?php if ($hasFilters): ?>
                             <div class="d-flex align-items-center gap-2">
                                 <label class="form-label mb-0" style="font-size: 0.9rem; font-weight: 500; color: #007bff;"><i class="fas fa-sort-amount-down me-1"></i>Urutkan:</label>

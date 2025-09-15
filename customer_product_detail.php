@@ -621,6 +621,85 @@ include __DIR__ . '/includes/header.php';
 		padding: 12px 16px;
 	}
 }
+
+/* Rotating Border Animation for Add to Cart Button */
+@keyframes rotateBorder {
+	0% {
+		transform: rotate(0deg);
+	}
+	100% {
+		transform: rotate(360deg);
+	}
+}
+
+.btn-rotating-border {
+	position: relative;
+	overflow: hidden;
+	background: linear-gradient(45deg, #007bff, #0056b3, #007bff, #0056b3);
+	background-size: 400% 400%;
+	animation: gradientShift 3s ease infinite;
+	border: none;
+	transition: all 0.3s ease;
+}
+
+.btn-rotating-border::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: conic-gradient(from 0deg, transparent, #007bff, #28a745, #ffc107, #dc3545, #6f42c1, transparent);
+	border-radius: inherit;
+	animation: rotateBorder 2s linear infinite;
+	z-index: -1;
+}
+
+.btn-rotating-border::after {
+	content: '';
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	right: 2px;
+	bottom: 2px;
+	background: #007bff;
+	border-radius: inherit;
+	z-index: -1;
+}
+
+/* Green variant for success buttons */
+.btn-success.btn-rotating-border {
+	background: linear-gradient(45deg, #28a745, #1e7e34, #28a745, #1e7e34);
+}
+
+.btn-success.btn-rotating-border::after {
+	background: #28a745;
+}
+
+.btn-rotating-border:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 25px rgba(0, 123, 255, 0.4);
+}
+
+.btn-success.btn-rotating-border:hover {
+	box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+}
+
+.btn-rotating-border:hover::before {
+	animation-duration: 1s;
+}
+
+@keyframes gradientShift {
+	0% {
+		background-position: 0% 50%;
+	}
+	50% {
+		background-position: 100% 50%;
+	}
+	100% {
+		background-position: 0% 50%;
+	}
+}
 </style>
 
 <div class="flex-grow-1">
@@ -873,12 +952,12 @@ include __DIR__ . '/includes/header.php';
 					<!-- Action Buttons -->
 					<div class="d-flex gap-1">
 						<?php if ($product['stokakhir'] > 0): ?>
-							<button class="btn btn-success" onclick="buyNowWithQuantity('<?php echo $product['kodebarang']; ?>')">
+							<button class="btn btn-success btn-rotating-border" onclick="buyNowWithQuantity('<?php echo $product['kodebarang']; ?>')">
 								<i class="fas fa-bolt me-1"></i>
 								<span class="d-none d-md-inline">Order Sekarang</span>
 								<span class="d-md-none">Order</span>
 							</button>
-							<button class="btn btn-primary" onclick="addToCartWithQuantity('<?php echo $product['kodebarang']; ?>')">
+							<button class="btn btn-primary btn-rotating-border" onclick="addToCartWithQuantity('<?php echo $product['kodebarang']; ?>')">
 								<i class="fas fa-cart-plus me-1"></i>
 								<span class="d-none d-md-inline">Tambah ke Keranjang</span>
 								<span class="d-md-none">Keranjang</span>
@@ -1052,10 +1131,14 @@ function addToCartWithQuantity(kodebarang) {
 	.then(response => response.json())
 	.then(data => {
 		if (data.success) {
-			// Show success message
+			// Show success message briefly then redirect to dashboard
 			showCartMessage('Item berhasil ditambahkan ke keranjang!', 'success');
 			// Update cart count in header
 			updateCartCount();
+			// Redirect to dashboard after 1.5 seconds
+			setTimeout(() => {
+				window.location.href = 'dashboard.php';
+			}, 1500);
 		} else {
 			showCartMessage(data.message || 'Gagal menambahkan item ke keranjang', 'error');
 		}

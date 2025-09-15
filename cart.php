@@ -202,6 +202,72 @@ include __DIR__ . '/includes/header.php';
         padding: 6px;
     }
 }
+
+/* Rotating Border Animation for Checkout Button */
+@keyframes rotateBorder {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.btn-rotating-border {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(45deg, #f8f9fa, #e9ecef, #f8f9fa, #e9ecef);
+    background-size: 400% 400%;
+    animation: gradientShift 3s ease infinite;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.btn-rotating-border::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: conic-gradient(from 0deg, transparent, #007bff, #28a745, #ffc107, #dc3545, #6f42c1, transparent);
+    border-radius: inherit;
+    animation: rotateBorder 2s linear infinite;
+    z-index: -1;
+}
+
+.btn-rotating-border::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    right: 2px;
+    bottom: 2px;
+    background: #f8f9fa;
+    border-radius: inherit;
+    z-index: -1;
+}
+
+.btn-rotating-border:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(248, 249, 250, 0.4);
+}
+
+.btn-rotating-border:hover::before {
+    animation-duration: 1s;
+}
+
+@keyframes gradientShift {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
 </style>
 
 <div class="flex-grow-1">
@@ -238,7 +304,7 @@ include __DIR__ . '/includes/header.php';
                 <h4 class="text-muted">Keranjang Order Kosong</h4>
                 <p class="text-muted">Belum ada item di keranjang order Anda.</p>
                 <a href="dashboard.php" class="btn btn-primary">
-                    <i class="fas fa-shopping-bag me-2"></i>Mulai Belanja
+                    <i class="fas fa-shopping-bag me-2"></i>Mulai Order
                 </a>
             </div>
         <?php else: ?>
@@ -254,7 +320,10 @@ include __DIR__ . '/includes/header.php';
                             </label>
                         </div>
                     </div>
-                    
+                </div>
+
+                <div class="col-lg-8">
+                    <!-- Item carts -->
                     <?php foreach ($cartItems as $item): ?>
                         <div class="cart-item">
                             <div class="row align-items-center p-3">
@@ -360,7 +429,7 @@ include __DIR__ . '/includes/header.php';
                             <span class="fw-bold">Rp <?php echo number_format($totalPrice, 0, ',', '.'); ?></span>
                         </div>
                         <hr style="border-color: rgba(255,255,255,0.3);">
-                        <button class="btn btn-light btn-lg w-100" onclick="proceedToCheckout()">
+                        <button class="btn btn-light btn-lg w-100 btn-rotating-border" onclick="proceedToCheckout()">
                             <i class="fas fa-credit-card me-2"></i>Lanjut Buat Order
                         </button>
                     </div>
