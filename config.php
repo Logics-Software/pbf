@@ -14,4 +14,3 @@ define('APP_BASE_URL', '/pbf'); // Set to the web path where this app is hosted
 ini_set('session.cookie_httponly', 1);
 ini_set('session.use_strict_mode', 1);
 ?>
-
