@@ -53,12 +53,17 @@ if ($user['role'] === 'sales') {
         $salesFilter = $user['kodesales']; // Force to user's sales code
         
         // Get customers who have made orders with this sales
-        $stmt = $pdo->prepare("SELECT DISTINCT h.kodecustomer, h.namacustomer 
-                              FROM headerorder h 
-                              WHERE h.kodesales = ? 
-                              ORDER BY h.namacustomer");
-        $stmt->execute([$user['kodesales']]);
-        $customerList = $stmt->fetchAll();
+        try {
+            $stmt = $pdo->prepare("SELECT DISTINCT h.kodecustomer, h.namacustomer 
+                                  FROM headerorder h 
+                                  WHERE h.kodesales = ? 
+                                  ORDER BY h.namacustomer");
+            $stmt->execute([$user['kodesales']]);
+            $customerList = $stmt->fetchAll();
+        } catch (PDOException $e) {
+            error_log("Laporan Customer List Error: " . $e->getMessage());
+            $customerList = [];
+        }
     } else {
         // Sales user without kodesales - show no data
         $salesFilter = 'INVALID_SALES_CODE';
@@ -75,11 +80,21 @@ if ($user['role'] === 'sales') {
     $salesFilter = ''; // Ignore sales filter completely
 } else {
     // For admin/operator/manajemen: show all sales and customers
-    $stmt = $pdo->query("SELECT kodesales, namasales FROM mastersales WHERE status = 'aktif' ORDER BY namasales");
-    $salesList = $stmt->fetchAll();
+    try {
+        $stmt = $pdo->query("SELECT kodesales, namasales FROM mastersales WHERE status = 'aktif' ORDER BY namasales");
+        $salesList = $stmt->fetchAll();
+    } catch (PDOException $e) {
+        error_log("Laporan Sales List Error: " . $e->getMessage());
+        $salesList = [];
+    }
 
-    $stmt = $pdo->query("SELECT kodecustomer, namacustomer FROM mastercustomer WHERE status = 'aktif' ORDER BY namacustomer");
-    $customerList = $stmt->fetchAll();
+    try {
+        $stmt = $pdo->query("SELECT kodecustomer, namacustomer FROM mastercustomer WHERE status = 'aktif' ORDER BY namacustomer");
+        $customerList = $stmt->fetchAll();
+    } catch (PDOException $e) {
+        error_log("Laporan Customer List Error: " . $e->getMessage());
+        $customerList = [];
+    }
 }
 
 // Build query based on filters
@@ -88,8 +103,11 @@ $params = [];
 
 // Date filtering
 if ($periodType === 'monthly') {
-    $whereConditions[] = "DATE_FORMAT(h.tanggalorder, '%Y-%m') = ?";
-    $params[] = $month;
+    // Use YEAR() and MONTH() for better compatibility
+    $whereConditions[] = "YEAR(h.tanggalorder) = ? AND MONTH(h.tanggalorder) = ?";
+    $monthParts = explode('-', $month);
+    $params[] = isset($monthParts[0]) ? $monthParts[0] : date('Y');
+    $params[] = isset($monthParts[1]) ? $monthParts[1] : date('m');
 } else {
     if ($startDate) {
         $whereConditions[] = "h.tanggalorder >= ?";
@@ -144,18 +162,30 @@ $baseQuery = "
 
 // Execute query
 try {
+    // Debug: Log query and params for troubleshooting
+    error_log("Laporan Query: " . $baseQuery);
+    error_log("Laporan Params: " . print_r($params, true));
+    
     $stmt = $pdo->prepare($baseQuery);
     $stmt->execute($params);
     $orders = $stmt->fetchAll();
 } catch (PDOException $e) {
-    // Log error in production, show user-friendly message
+    // Log full error details
     error_log("Laporan Order Error: " . $e->getMessage());
+    error_log("Laporan Order Query: " . $baseQuery);
+    error_log("Laporan Order Params: " . print_r($params, true));
+    error_log("Laporan Order Trace: " . $e->getTraceAsString());
+    
     $orders = [];
-    // Optionally show error to user in development
-    if (ini_get('display_errors')) {
-        die("Database Error: " . htmlspecialchars($e->getMessage()));
+    // Show detailed error for debugging (remove in production)
+    $errorMessage = "Database Error: " . htmlspecialchars($e->getMessage());
+    $errorMessage .= "<br><strong>Query:</strong><pre>" . htmlspecialchars($baseQuery) . "</pre>";
+    $errorMessage .= "<br><strong>Params:</strong><pre>" . htmlspecialchars(print_r($params, true)) . "</pre>";
+    
+    if (ini_get('display_errors') || isset($_GET['debug'])) {
+        die($errorMessage);
     } else {
-        die("Terjadi kesalahan saat memuat data. Silakan hubungi administrator.");
+        die("Terjadi kesalahan saat memuat data. Silakan hubungi administrator. [Debug: Tambahkan ?debug=1 di URL untuk melihat detail error]");
     }
 }
 
