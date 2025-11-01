@@ -1,16 +1,36 @@
 <?php
+// Enable error reporting for debugging (disable in production)
+error_reporting(E_ALL);
+ini_set('display_errors', 0); // Set to 1 for debugging
+ini_set('log_errors', 1);
+
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/db.php';
-require_login();
-$user = current_user();
 
-// Check if user has access to reports
-if (!can_access('reports')) {
-    header('Location: dashboard.php');
-    exit;
+try {
+    require_login();
+    $user = current_user();
+    
+    if (!$user) {
+        header('Location: login.php');
+        exit;
+    }
+    
+    // Check if user has access to reports
+    if (!can_access('reports')) {
+        header('Location: dashboard.php');
+        exit;
+    }
+    
+    $pdo = get_pdo_connection();
+} catch (Exception $e) {
+    error_log("Laporan Order Auth Error: " . $e->getMessage());
+    if (ini_get('display_errors')) {
+        die("Authentication Error: " . htmlspecialchars($e->getMessage()));
+    } else {
+        die("Terjadi kesalahan autentikasi. Silakan hubungi administrator.");
+    }
 }
-
-$pdo = get_pdo_connection();
 
 // Get filter parameters
 $reportType = $_GET['type'] ?? 'global'; // global, customer, sales
@@ -29,18 +49,29 @@ $customerList = [];
 
 if ($user['role'] === 'sales') {
     // For sales role: force filter to their own sales code, ignore all other sales
-    $salesFilter = $user['kodesales']; // Force to user's sales code
-    
-    // Get customers who have made orders with this sales
-    $stmt = $pdo->prepare("SELECT DISTINCT h.kodecustomer, h.namacustomer 
-                          FROM headerorder h 
-                          WHERE h.kodesales = ? 
-                          ORDER BY h.namacustomer");
-    $stmt->execute([$user['kodesales']]);
-    $customerList = $stmt->fetchAll();
+    if (!empty($user['kodesales'])) {
+        $salesFilter = $user['kodesales']; // Force to user's sales code
+        
+        // Get customers who have made orders with this sales
+        $stmt = $pdo->prepare("SELECT DISTINCT h.kodecustomer, h.namacustomer 
+                              FROM headerorder h 
+                              WHERE h.kodesales = ? 
+                              ORDER BY h.namacustomer");
+        $stmt->execute([$user['kodesales']]);
+        $customerList = $stmt->fetchAll();
+    } else {
+        // Sales user without kodesales - show no data
+        $salesFilter = 'INVALID_SALES_CODE';
+        $customerList = [];
+    }
 } elseif ($user['role'] === 'customer') {
     // For customer role: force filter to their own customer code, ignore all other filters
-    $customerFilter = $user['kodecustomer']; // Force to user's customer code
+    if (!empty($user['kodecustomer'])) {
+        $customerFilter = $user['kodecustomer']; // Force to user's customer code
+    } else {
+        // Customer user without kodecustomer - show no data
+        $customerFilter = 'INVALID_CUSTOMER_CODE';
+    }
     $salesFilter = ''; // Ignore sales filter completely
 } else {
     // For admin/operator/manajemen: show all sales and customers
@@ -71,15 +102,21 @@ if ($periodType === 'monthly') {
 }
 
 // Sales filter
-if ($salesFilter) {
+if ($salesFilter && $salesFilter !== 'INVALID_SALES_CODE') {
     $whereConditions[] = "h.kodesales = ?";
     $params[] = $salesFilter;
+} elseif ($salesFilter === 'INVALID_SALES_CODE') {
+    // Sales user without valid kodesales - return empty result
+    $whereConditions[] = "1 = 0"; // Always false condition
 }
 
 // Customer filter
-if ($customerFilter) {
+if ($customerFilter && $customerFilter !== 'INVALID_CUSTOMER_CODE') {
     $whereConditions[] = "h.kodecustomer = ?";
     $params[] = $customerFilter;
+} elseif ($customerFilter === 'INVALID_CUSTOMER_CODE') {
+    // Customer user without valid kodecustomer - return empty result
+    $whereConditions[] = "1 = 0"; // Always false condition
 }
 
 if ($statusFilter) {
@@ -106,18 +143,36 @@ $baseQuery = "
 ";
 
 // Execute query
-$stmt = $pdo->prepare($baseQuery);
-$stmt->execute($params);
-$orders = $stmt->fetchAll();
+try {
+    $stmt = $pdo->prepare($baseQuery);
+    $stmt->execute($params);
+    $orders = $stmt->fetchAll();
+} catch (PDOException $e) {
+    // Log error in production, show user-friendly message
+    error_log("Laporan Order Error: " . $e->getMessage());
+    $orders = [];
+    // Optionally show error to user in development
+    if (ini_get('display_errors')) {
+        die("Database Error: " . htmlspecialchars($e->getMessage()));
+    } else {
+        die("Terjadi kesalahan saat memuat data. Silakan hubungi administrator.");
+    }
+}
 
 // Group data based on report type
 $groupedData = [];
 $summary = [
     'total_orders' => count($orders),
-    'total_value' => array_sum(array_column($orders, 'totalfaktur')),
+    'total_value' => 0,
     'completed_orders' => 0,
     'completed_value' => 0
 ];
+
+// Calculate total value safely
+if (!empty($orders)) {
+    $totals = array_column($orders, 'totalfaktur');
+    $summary['total_value'] = !empty($totals) ? array_sum($totals) : 0;
+}
 
 foreach ($orders as $order) {
     if ($order['status'] === 'terima') {
