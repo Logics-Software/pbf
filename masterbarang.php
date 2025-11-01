@@ -288,16 +288,42 @@ include __DIR__ . '/includes/header.php';
 											$photos = [];
 											if ($row['foto']) {
 												try {
-													$photos = json_decode($row['foto'], true);
-													if (!is_array($photos)) {
-														$photos = [$row['foto']]; // Handle old single photo format
+													$decoded = json_decode($row['foto'], true);
+													if (is_array($decoded) && !empty($decoded)) {
+														$photos = $decoded;
+													} elseif (is_string($decoded)) {
+														$photos = [$decoded];
+													} else {
+														// Handle old single photo format (direct string)
+														$photos = [$row['foto']];
 													}
 												} catch (Exception $e) {
-													$photos = [$row['foto']]; // Handle old single photo format
+													// Handle old single photo format
+													$photos = [$row['foto']];
 												}
 											}
+											
+											// Build image URL - use view_image.php if needed
+											$baseUrl = defined('APP_BASE_URL') ? rtrim(APP_BASE_URL, '/') : '';
+											foreach ($photos as &$photo) {
+												if (!empty($photo)) {
+													// Skip if already absolute URL
+													if (preg_match('/^https?:\/\//', $photo)) {
+														continue;
+													}
+													// Extract filename from path
+													$filename = basename($photo);
+													// Build URL using view_image.php
+													if ($baseUrl) {
+														$photo = $baseUrl . '/images/view_image.php?file=' . urlencode($filename);
+													} else {
+														$photo = '/images/view_image.php?file=' . urlencode($filename);
+													}
+												}
+											}
+											unset($photo);
 											?>
-											<?php if (!empty($photos)): ?>
+											<?php if (!empty($photos) && !empty($photos[0])): ?>
 												<div class="d-flex align-items-center">
 													<?php if (count($photos) === 1): ?>
 														<img src="<?php echo htmlspecialchars($photos[0]); ?>" 
@@ -309,7 +335,8 @@ include __DIR__ . '/includes/header.php';
 															 data-image-src="<?php echo htmlspecialchars($photos[0]); ?>"
 															 data-image-name="<?php echo htmlspecialchars($row['namabarang']); ?>"
 															 data-photos='<?php echo htmlspecialchars(json_encode($photos)); ?>'
-															 title="Klik untuk melihat foto">
+															 title="Klik untuk melihat foto"
+															 onerror="handleImageError(this);">
 													<?php else: ?>
 														<div class="position-relative">
 															<img src="<?php echo htmlspecialchars($photos[0]); ?>" 
@@ -321,7 +348,8 @@ include __DIR__ . '/includes/header.php';
 																 data-image-src="<?php echo htmlspecialchars($photos[0]); ?>"
 																 data-image-name="<?php echo htmlspecialchars($row['namabarang']); ?>"
 																 data-photos='<?php echo htmlspecialchars(json_encode($photos)); ?>'
-																 title="Klik untuk melihat foto (<?php echo count($photos); ?> foto)">
+																 title="Klik untuk melihat foto (<?php echo count($photos); ?> foto)"
+																 onerror="handleImageError(this);">
 															<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary" style="font-size: 0.6em;">
 																<?php echo count($photos); ?>
 															</span>
@@ -481,6 +509,16 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <script>
+// Global function to handle image errors
+function handleImageError(img) {
+    const baseUrl = '<?php echo defined("APP_BASE_URL") ? rtrim(APP_BASE_URL, "/") : ""; ?>';
+    img.onerror = null;
+    img.src = baseUrl + '/assets/img/no-image.svg';
+    img.style.cursor = 'default';
+    img.removeAttribute('data-bs-toggle');
+    img.removeAttribute('data-bs-target');
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const imageModal = document.getElementById('imageModal');
     const modalImage = document.getElementById('modalImage');
@@ -494,6 +532,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const prevPhotoBtn = document.getElementById('prevPhoto');
     const nextPhotoBtn = document.getElementById('nextPhoto');
     const photoCounter = document.getElementById('photoCounter');
+    
+    // Get base URL from PHP config
+    const baseUrl = '<?php echo defined("APP_BASE_URL") ? rtrim(APP_BASE_URL, "/") : ""; ?>';
+    const noImagePath = baseUrl + '/assets/img/no-image.svg';
     
     let currentZoom = 1;
     let isDragging = false;
@@ -524,6 +566,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (currentPhotoIndex === -1) currentPhotoIndex = 0;
         
         modalImage.src = imageSrc;
+        modalImage.onerror = function() {
+            this.src = noImagePath;
+            this.style.cursor = 'default';
+        };
         modalTitle.textContent = 'Foto: ' + imageName;
         
         // Show/hide navigation based on photo count
@@ -553,6 +599,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (currentPhotoIndex > 0) {
             currentPhotoIndex--;
             modalImage.src = currentPhotos[currentPhotoIndex];
+            modalImage.onerror = function() {
+                this.src = noImagePath;
+                this.style.cursor = 'default';
+            };
             updatePhotoCounter();
             updateNavigationButtons();
             // Reset zoom when changing photos
@@ -569,6 +619,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (currentPhotoIndex < currentPhotos.length - 1) {
             currentPhotoIndex++;
             modalImage.src = currentPhotos[currentPhotoIndex];
+            modalImage.onerror = function() {
+                this.src = noImagePath;
+                this.style.cursor = 'default';
+            };
             updatePhotoCounter();
             updateNavigationButtons();
             // Reset zoom when changing photos
@@ -789,16 +843,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const autoRefreshStatus = document.getElementById('autoRefreshStatus');
     const refreshCountdown = document.getElementById('refreshCountdown');
     
-    console.log('Auto refresh elements found:', {
-        toggle: !!autoRefreshToggle,
-        text: !!autoRefreshText,
-        status: !!autoRefreshStatus,
-        countdown: !!refreshCountdown
-    });
-    
     // Start countdown
     function startCountdown() {
-        console.log('Starting countdown');
         countdown = 5;
         if (refreshCountdown) refreshCountdown.textContent = countdown;
         
@@ -809,7 +855,6 @@ document.addEventListener('DOMContentLoaded', function() {
         countdownInterval = setInterval(function() {
             countdown--;
             if (refreshCountdown) refreshCountdown.textContent = countdown;
-            console.log('Countdown:', countdown);
             
             if (countdown <= 0) {
                 clearInterval(countdownInterval);
@@ -820,7 +865,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Stop countdown
     function stopCountdown() {
-        console.log('Stopping countdown');
         if (countdownInterval) {
             clearInterval(countdownInterval);
             countdownInterval = null;
@@ -830,8 +874,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Refresh page data
     function refreshData() {
-        console.log('Refreshing data...');
-        
         // Show loading indicator
         if (autoRefreshStatus) {
             autoRefreshStatus.classList.remove('alert-info');
@@ -846,11 +888,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Start auto refresh
     function startAutoRefresh() {
-        console.log('Starting auto refresh');
-        
         if (refreshInterval) {
-            console.log('Auto refresh already running');
-            return;
+            return; // Already running
         }
         
         autoRefreshEnabled = true;
@@ -868,22 +907,15 @@ document.addEventListener('DOMContentLoaded', function() {
             autoRefreshStatus.classList.remove('d-none');
         }
         
-        console.log('Auto refresh enabled, setting up interval');
-        
         // Simple auto refresh every 5 seconds
         refreshInterval = setInterval(function() {
-            console.log('Auto refresh tick - starting refresh process');
             startCountdown();
             setTimeout(refreshData, 5000);
         }, 5000);
-        
-        console.log('Auto refresh started successfully');
     }
     
     // Stop auto refresh
     function stopAutoRefresh() {
-        console.log('Stopping auto refresh');
-        
         if (refreshInterval) {
             clearInterval(refreshInterval);
             refreshInterval = null;
@@ -904,14 +936,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (autoRefreshStatus) {
             autoRefreshStatus.classList.add('d-none');
         }
-        
-        console.log('Auto refresh stopped');
     }
     
     // Toggle auto refresh
     if (autoRefreshToggle) {
         autoRefreshToggle.addEventListener('click', function() {
-            console.log('Toggle button clicked, current state:', autoRefreshEnabled);
             if (autoRefreshEnabled) {
                 stopAutoRefresh();
             } else {
@@ -919,19 +948,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             // Save preference when toggled
             localStorage.setItem('masterbarang_autoRefresh', autoRefreshEnabled.toString());
-            console.log('Preference saved:', autoRefreshEnabled);
         });
     }
     
     // Check for auto refresh preference in localStorage
     const savedPreference = localStorage.getItem('masterbarang_autoRefresh');
-    console.log('Saved preference:', savedPreference);
     if (savedPreference === 'true') {
-        console.log('Restoring auto refresh from saved preference');
         startAutoRefresh();
     }
-    
-    console.log('Auto refresh functionality initialized');
 });
 
 // Delete Confirmation Modal Functionality

@@ -8,6 +8,11 @@ if (!can_access('masterbarang')) {
 }
 $pdo = get_pdo_connection();
 
+// Helper function to safely escape HTML, handling null values
+function h($value) {
+	return htmlspecialchars((string)($value ?? ''), ENT_QUOTES, 'UTF-8');
+}
+
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $isEdit = $id > 0;
 $error = '';
@@ -108,7 +113,7 @@ include __DIR__ . '/includes/header.php';
 	<div class="container" style="max-width: 1200px;">
 		<h3 class="mb-3"><?php echo $isEdit ? 'Edit Barang' : 'Tambah Barang'; ?></h3>
 		<?php if ($error): ?>
-			<div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
+			<div class="alert alert-danger"><?php echo h($error); ?></div>
 		<?php endif; ?>
 		<div class="card">
 			<div class="card-body">
@@ -116,43 +121,43 @@ include __DIR__ . '/includes/header.php';
 					<div class="row g-3">
 						<div class="col-md-2">
 							<label class="form-label">Kode Barang <span class="text-danger">*</span></label>
-							<input type="text" class="form-control" name="kodebarang" required value="<?php echo htmlspecialchars($data['kodebarang']); ?>">
+							<input type="text" class="form-control" name="kodebarang" required value="<?php echo h($data['kodebarang']); ?>">
 						</div>
 						<div class="col-md-7">
 							<label class="form-label">Nama Barang <span class="text-danger">*</span></label>
-							<input type="text" class="form-control" name="namabarang" required value="<?php echo htmlspecialchars($data['namabarang']); ?>">
+							<input type="text" class="form-control" name="namabarang" required value="<?php echo h($data['namabarang']); ?>">
 						</div>
 						<div class="col-md-3">
 							<label class="form-label">Satuan <span class="text-danger">*</span></label>
-							<input type="text" class="form-control" name="satuan" required value="<?php echo htmlspecialchars($data['satuan']); ?>" placeholder="Contoh: Tablet, Kapsul, Botol">
+							<input type="text" class="form-control" name="satuan" required value="<?php echo h($data['satuan']); ?>" placeholder="Contoh: Tablet, Kapsul, Botol">
 						</div>
 						<div class="col-md-6 d-none">
 							<label class="form-label">Kode Pabrik</label>
-							<input type="text" class="form-control" name="kodepabrik" value="<?php echo htmlspecialchars($data['kodepabrik']); ?>">
+							<input type="text" class="form-control" name="kodepabrik" value="<?php echo h($data['kodepabrik']); ?>">
 						</div>
 						<div class="col-md-3">
 							<label class="form-label">Nama Pabrik</label>
-							<input type="text" class="form-control" name="namapabrik" value="<?php echo htmlspecialchars($data['namapabrik']); ?>">
+							<input type="text" class="form-control" name="namapabrik" value="<?php echo h($data['namapabrik']); ?>">
 						</div>
 						<div class="col-md-4 d-none">
 							<label class="form-label">Kode Golongan</label>
-							<input type="text" class="form-control" name="kodegolongan" value="<?php echo htmlspecialchars($data['kodegolongan']); ?>">
+							<input type="text" class="form-control" name="kodegolongan" value="<?php echo h($data['kodegolongan']); ?>">
 						</div>
 						<div class="col-md-3">
 							<label class="form-label">Nama Golongan</label>
-							<input type="text" class="form-control" name="namagolongan" value="<?php echo htmlspecialchars($data['namagolongan']); ?>">
+							<input type="text" class="form-control" name="namagolongan" value="<?php echo h($data['namagolongan']); ?>">
 						</div>
 						<div class="col-md-6">
 							<label class="form-label">Kemasan</label>
-							<input type="text" name="kemasan" class="form-control" value="<?php echo htmlspecialchars($data['kemasan']); ?>" placeholder="Jenis kemasan barang">
+							<input type="text" name="kemasan" class="form-control" value="<?php echo h($data['kemasan']); ?>" placeholder="Jenis kemasan barang">
 						</div>
 						<div class="col-md-2">
 							<label class="form-label">NIE (Nomor Izin Edar)</label>
-							<input type="text" name="nie" class="form-control" value="<?php echo htmlspecialchars($data['nie']); ?>" placeholder="Nomor Izin Edar">
+							<input type="text" name="nie" class="form-control" value="<?php echo h($data['nie']); ?>" placeholder="Nomor Izin Edar">
 						</div>
 						<div class="col-md-7">
 							<label class="form-label">Supplier/Pemasok</label>
-							<input type="text" name="supplier" class="form-control" value="<?php echo htmlspecialchars($data['supplier']); ?>" placeholder="Nama supplier/pemasok">
+							<input type="text" name="supplier" class="form-control" value="<?php echo h($data['supplier']); ?>" placeholder="Nama supplier/pemasok">
 						</div>
 						<div class="col-md-3">
 							<label class="form-label">Status</label>
@@ -163,26 +168,26 @@ include __DIR__ . '/includes/header.php';
 						</div>
 						<div class="col-12">
 							<label class="form-label">Kandungan/Komposisi</label>
-							<textarea name="kandungan" class="form-control" rows="3" placeholder="Masukkan kandungan/komposisi barang"><?php echo htmlspecialchars($data['kandungan']); ?></textarea>
+							<textarea name="kandungan" class="form-control" rows="3" placeholder="Masukkan kandungan/komposisi barang"><?php echo h($data['kandungan']); ?></textarea>
 						</div>
 						<div class="col-md-3">
 							<label class="form-label">HPP</label>
 							<div class="input-group">
 								<span class="input-group-text">Rp</span>
-								<input type="number" class="form-control" name="hpp" step="1" min="0" value="<?php echo htmlspecialchars(number_format($data['hpp'], 0, '', '')); ?>">
+								<input type="number" class="form-control" name="hpp" step="1" min="0" value="<?php echo h(number_format($data['hpp'] ?? 0, 0, '', '')); ?>">
 							</div>
 						</div>
 						<div class="col-md-3 d-none">
 							<label class="form-label">Harga Beli</label>
 							<div class="input-group">
 								<span class="input-group-text">Rp</span>
-								<input type="number" class="form-control" name="hargabeli" step="1" min="0" value="<?php echo htmlspecialchars(number_format($data['hargabeli'], 0, '', '')); ?>">
+								<input type="number" class="form-control" name="hargabeli" step="1" min="0" value="<?php echo h(number_format($data['hargabeli'] ?? 0, 0, '', '')); ?>">
 							</div>
 						</div>
 						<div class="col-md-2 d-none">
 							<label class="form-label">Diskon Beli (%)</label>
 							<div class="input-group">
-								<input type="number" class="form-control" name="discbeli" step="0.01" min="0" max="100" value="<?php echo htmlspecialchars($data['discbeli']); ?>">
+								<input type="number" class="form-control" name="discbeli" step="0.01" min="0" max="100" value="<?php echo h($data['discbeli']); ?>">
 								<span class="input-group-text">%</span>
 							</div>
 						</div>
@@ -190,13 +195,13 @@ include __DIR__ . '/includes/header.php';
 							<label class="form-label">Harga Jual</label>
 							<div class="input-group">
 								<span class="input-group-text">Rp</span>
-								<input type="number" class="form-control" name="hargajual" step="1" min="0" value="<?php echo htmlspecialchars(number_format($data['hargajual'], 0, '', '')); ?>">
+								<input type="number" class="form-control" name="hargajual" step="1" min="0" value="<?php echo h(number_format($data['hargajual'] ?? 0, 0, '', '')); ?>">
 							</div>
 						</div>
 						<div class="col-md-2">
 							<label class="form-label">Diskon Jual (%)</label>
 							<div class="input-group">
-								<input type="number" class="form-control" name="discjual" step="0.01" min="0" max="100" value="<?php echo htmlspecialchars($data['discjual']); ?>">
+								<input type="number" class="form-control" name="discjual" step="0.01" min="0" max="100" value="<?php echo h($data['discjual']); ?>">
 								<span class="input-group-text">%</span>
 							</div>
 						</div>
@@ -219,12 +224,12 @@ include __DIR__ . '/includes/header.php';
 						</div>
 						<div class="col-md-2">
 							<label class="form-label">Stok Akhir</label>
-							<input type="number" class="form-control" name="stokakhir" min="0" value="<?php echo htmlspecialchars($data['stokakhir']); ?>">
+							<input type="number" class="form-control" name="stokakhir" min="0" value="<?php echo h($data['stokakhir']); ?>">
 						</div>
 						<div class="col-12">
 							<label class="form-label">Deskripsi/Spesifikasi Produk</label>
 							<div id="deskripsi-editor" style="height: 200px; border: 1px solid #ced4da; border-radius: 0.375rem;"></div>
-							<textarea name="deskripsi" id="deskripsi-textarea" style="display: none;"><?php echo htmlspecialchars($data['deskripsi']); ?></textarea>
+							<textarea name="deskripsi" id="deskripsi-textarea" style="display: none;"><?php echo h($data['deskripsi']); ?></textarea>
 						</div>
 						<div class="col-12">
 							<label class="form-label">Gambar Barang</label>
@@ -240,7 +245,7 @@ include __DIR__ . '/includes/header.php';
 								</div>
 							</div>
 							<input type="file" id="fileInput" multiple accept="image/*" style="display: none;">
-							<input type="hidden" name="foto" id="fotoInput" value="<?php echo htmlspecialchars($data['foto']); ?>">
+							<input type="hidden" name="foto" id="fotoInput" value="<?php echo h($data['foto']); ?>">
 							
 							<!-- Photo Gallery -->
 							<div id="photoGallery" class="mt-3" style="display: none;">

@@ -169,6 +169,22 @@ if ($isEdit) {
         exit;
     }
     
+    // Filter by customer code if user role is customer
+    if ($user['role'] === 'customer' && !empty($user['kodecustomer'])) {
+        if ($order['kodecustomer'] !== $user['kodecustomer']) {
+            header('Location: order.php');
+            exit;
+        }
+    }
+    
+    // Filter by sales code if user role is sales
+    if ($user['role'] === 'sales' && !empty($user['kodesales'])) {
+        if ($order['kodesales'] !== $user['kodesales']) {
+            header('Location: order.php');
+            exit;
+        }
+    }
+    
     // Check if order can be edited (only idle status)
     if ($order['status'] !== 'idle') {
         header('Location: order.php?msg=not_editable');

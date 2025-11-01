@@ -1284,9 +1284,9 @@ include __DIR__ . '/includes/header.php';
                                 <a href="order.php" class="btn btn-outline-primary">
                                     <i class="fas fa-list"></i> Lihat Semua Orders
                                 </a>
-                                <a href="mastercustomer.php" class="btn btn-outline-info">
+                                <!-- <a href="mastercustomer.php" class="btn btn-outline-info">
                                     <i class="fas fa-users"></i> Kelola Customer
-                                </a>
+                                </a> -->
                             </div>
                         </div>
                     </div>

@@ -127,6 +127,12 @@ try {
 			$params[] = $user['kodecustomer'];
 		}
 		
+		// Filter by sales code if user role is sales
+		if ($user['role'] === 'sales' && !empty($user['kodesales'])) {
+			$where[] = 'kodesales = ?';
+			$params[] = $user['kodesales'];
+		}
+		
 		$whereClause = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
 		
 		// Get total count

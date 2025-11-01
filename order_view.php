@@ -29,6 +29,12 @@ if ($user['role'] === 'customer' && !empty($user['kodecustomer'])) {
     $params[] = $user['kodecustomer'];
 }
 
+// Filter by sales code if user role is sales
+if ($user['role'] === 'sales' && !empty($user['kodesales'])) {
+    $sql .= " AND kodesales = ?";
+    $params[] = $user['kodesales'];
+}
+
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $order = $stmt->fetch();

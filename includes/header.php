@@ -1201,13 +1201,10 @@ document.addEventListener('DOMContentLoaded', function() {
             fetch('api/cart.php')
                 .then(response => response.json())
                 .then(data => {
-                    console.log('Cart API Response:', data); // Debug log
                     if (data.success && data.data && data.data.items) {
                         cartData = data.data.items || [];
-                        console.log('Cart items loaded:', cartData); // Debug log
                         updateCartPopup();
                     } else {
-                        console.log('No cart data found or API error:', data);
                         cartData = [];
                         updateCartPopup();
                     }
@@ -1650,37 +1647,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Mobile Navbar Enhancement for Non-Customer Roles
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Mobile navbar enhancement loaded');
-    
     const navbarToggler = document.querySelector('.navbar-toggler');
     const navbarCollapse = document.querySelector('.navbar-collapse');
     
     if (navbarToggler && navbarCollapse) {
-        console.log('Navbar elements found');
-        
         // Handle dropdown clicks in mobile navbar
         const dropdownToggles = document.querySelectorAll('.navbar-nav .dropdown-toggle');
-        console.log('Found dropdown toggles:', dropdownToggles.length);
         
         // User dropdown is now handled by Bootstrap with data-bs-toggle="dropdown"
         
-        dropdownToggles.forEach((toggle, index) => {
-            console.log(`Setting up dropdown toggle ${index + 1}:`, toggle);
-            
+        dropdownToggles.forEach((toggle) => {
             // Skip user dropdown as it's handled by Bootstrap
             if (toggle.id === 'userDropdown') {
-                console.log('Skipping user dropdown as it\'s handled by Bootstrap');
                 return;
             }
             
             toggle.addEventListener('click', function(e) {
-                console.log('Dropdown toggle clicked:', this);
                 e.preventDefault();
                 e.stopPropagation();
                 
                 // Find the dropdown menu (next sibling ul element)
                 const dropdownMenu = this.nextElementSibling;
-                console.log('Dropdown menu found:', dropdownMenu);
                 
                 if (!dropdownMenu) {
                     console.error('Dropdown menu not found for:', this);
@@ -1701,46 +1688,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Toggle current dropdown
                 const isOpen = dropdownMenu.classList.contains('show');
-                console.log('Dropdown is currently open:', isOpen);
                 
                 if (isOpen) {
                     dropdownMenu.classList.remove('show');
                     this.setAttribute('aria-expanded', 'false');
-                    console.log('Dropdown closed');
                 } else {
                     dropdownMenu.classList.add('show');
                     this.setAttribute('aria-expanded', 'true');
-                    console.log('Dropdown opened');
                 }
             });
         });
         
         // Fallback: If no dropdowns were found, try again after a short delay
         if (dropdownToggles.length === 0) {
-            console.log('No dropdown toggles found initially, retrying...');
             setTimeout(() => {
                 const retryDropdownToggles = document.querySelectorAll('.navbar-nav .dropdown-toggle');
-                console.log('Retry found dropdown toggles:', retryDropdownToggles.length);
                 
-                retryDropdownToggles.forEach((toggle, index) => {
-                    console.log(`Setting up retry dropdown toggle ${index + 1}:`, toggle);
-                    
+                retryDropdownToggles.forEach((toggle) => {
                     // Skip user dropdown as it's handled by Bootstrap
                     if (toggle.id === 'userDropdown') {
-                        console.log('Skipping user dropdown in retry as it\'s handled by Bootstrap');
                         return;
                     }
                     
                     toggle.addEventListener('click', function(e) {
-                        console.log('Retry dropdown toggle clicked:', this);
                         e.preventDefault();
                         e.stopPropagation();
                         
                         const dropdownMenu = this.nextElementSibling;
-                        console.log('Retry dropdown menu found:', dropdownMenu);
                         
                         if (!dropdownMenu) {
-                            console.error('Retry dropdown menu not found for:', this);
+                            console.error('Dropdown menu not found for:', this);
                             return;
                         }
                         
@@ -1756,16 +1733,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         });
                         
                         const isOpen = dropdownMenu.classList.contains('show');
-                        console.log('Retry dropdown is currently open:', isOpen);
                         
                         if (isOpen) {
                             dropdownMenu.classList.remove('show');
                             this.setAttribute('aria-expanded', 'false');
-                            console.log('Retry dropdown closed');
                         } else {
                             dropdownMenu.classList.add('show');
                             this.setAttribute('aria-expanded', 'true');
-                            console.log('Retry dropdown opened');
                         }
                     });
                 });

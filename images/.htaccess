@@ -1,17 +1,13 @@
-# Allow only image files
+# Set correct MIME types for image files
 
-<FilesMatch "\.(jpg|jpeg|png|gif|webp)$">
-Order Allow,Deny
-Allow from all
-</FilesMatch>
+AddType image/jpeg .jpeg .jpg
+AddType image/png .png
+AddType image/gif .gif
+AddType image/webp .webp
+AddType image/svg+xml .svg
 
-# Deny access to PHP files
+# Enable CORS if needed
 
-<FilesMatch "\.php$">
-Order Deny,Allow
-Deny from all
-</FilesMatch>
-
-# Prevent directory browsing
-
-Options -Indexes
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+</IfModule>
