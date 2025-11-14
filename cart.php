@@ -449,9 +449,11 @@ function updateSelectedItems() {
     let totalSelectedItems = 0;
     
     // Update select all checkbox state
-    const checkedCount = document.querySelectorAll('.item-checkbox:checked').length;
-    selectAllCheckbox.checked = checkedCount === checkboxes.length;
-    selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+    if (selectAllCheckbox) {
+        const checkedCount = document.querySelectorAll('.item-checkbox:checked').length;
+        selectAllCheckbox.checked = checkedCount === checkboxes.length;
+        selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+    }
     
     // Calculate totals for selected items
     checkboxes.forEach(checkbox => {
@@ -493,13 +495,16 @@ function updateSummary(totalItems, totalPrice) {
 }
 
 // Select all functionality
-document.getElementById('selectAll').addEventListener('change', function() {
-    const checkboxes = document.querySelectorAll('.item-checkbox');
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = this.checked;
+const selectAllElement = document.getElementById('selectAll');
+if (selectAllElement) {
+    selectAllElement.addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.item-checkbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+        updateSelectedItems();
     });
-    updateSelectedItems();
-});
+}
 
 // Update quantity
 function updateQuantity(kodebarang, quantity) {

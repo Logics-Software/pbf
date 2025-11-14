@@ -690,9 +690,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const cartItems = <?php echo json_encode($cartItems); ?>;
     
     // Clear existing items first
-    const itemsContainer = document.getElementById('itemsContainer');
-    if (itemsContainer) {
-        itemsContainer.innerHTML = '';
+    const itemList = document.getElementById('itemList');
+    if (itemList) {
+        const emptyMsg = itemList.querySelector('.text-center');
+        if (emptyMsg) {
+            emptyMsg.remove();
+        }
+        // Remove all existing item rows
+        const existingRows = itemList.querySelectorAll('.item-row');
+        existingRows.forEach(row => row.remove());
         itemIndex = 0;
     }
     
@@ -902,8 +908,13 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         
         const formData = new FormData(this);
+        // Check if order is created from cart
+        const urlParams = new URLSearchParams(window.location.search);
+        const fromCart = urlParams.get('from_cart') === '1';
+        const orderId = parseInt(formData.get('id') || 0);
+        
         const data = {
-            id: formData.get('id') || 0,
+            id: orderId,
             noorder: formData.get('noorder'),
             tanggalorder: formData.get('tanggalorder'),
             kodecustomer: formData.get('kodecustomer'),
@@ -914,18 +925,32 @@ document.addEventListener('DOMContentLoaded', function() {
             nofaktur: formData.get('nofaktur') || null,
             tanggalfaktur: formData.get('tanggalfaktur') || null,
             namapengirim: formData.get('namapengirim') || null,
+            from_cart: fromCart && orderId === 0 ? true : false, // Only for new orders
             details: []
         };
         
         // Collect details
         document.querySelectorAll('.item-row').forEach(row => {
+            const kodebarangEl = row.querySelector('.item-kodebarang');
+            const namabarangEl = row.querySelector('.item-namabarang');
+            const satuanEl = row.querySelector('.item-satuan');
+            const jumlahEl = row.querySelector('.item-jumlah');
+            const hargasatuanEl = row.querySelector('.item-hargasatuan');
+            const discountEl = row.querySelector('.item-discount');
+            
+            // Skip if required elements are missing
+            if (!kodebarangEl || !namabarangEl || !jumlahEl || !hargasatuanEl) {
+                console.warn('Skipping invalid item row:', row);
+                return;
+            }
+            
             const detail = {
-                kodebarang: row.querySelector('.item-kodebarang').value,
-                namabarang: row.querySelector('.item-namabarang').value,
-                satuan: row.querySelector('.item-satuan').value,
-                jumlah: parseInt(row.querySelector('.item-jumlah').value),
-                hargasatuan: parseInt(row.querySelector('.item-hargasatuan').getAttribute('data-original-value')),
-                discount: parseFloat(row.querySelector('.item-discount').value) || 0
+                kodebarang: kodebarangEl.value,
+                namabarang: namabarangEl.value,
+                satuan: satuanEl ? satuanEl.value : '',
+                jumlah: parseInt(jumlahEl.value) || 0,
+                hargasatuan: parseInt(hargasatuanEl.getAttribute('data-original-value')) || 0,
+                discount: discountEl ? (parseFloat(discountEl.value) || 0) : 0
             };
             data.details.push(detail);
         });
@@ -1598,55 +1623,57 @@ function addItemFromCart(cartItem) {
                 <div class="col-md-1">
                     <label class="form-label">Kode</label>
                     <input type="text" class="form-control item-kodebarang" 
-                           name="details[${itemIndex}][kodebarang]"
+                           name="details[${itemIndex}][kodebarang]" 
                            value="${cartItem.kodebarang}" readonly>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Nama Barang</label>
                     <input type="text" class="form-control item-namabarang" 
-                           name="details[${itemIndex}][namabarang]"
+                           name="details[${itemIndex}][namabarang]" 
                            value="${cartItem.namabarang}" readonly>
                 </div>
                 <div class="col-md-1">
-                    <label class="form-label">Qty</label>
-                    <input type="number" class="form-control item-quantity" 
-                           name="details[${itemIndex}][quantity]"
-                           value="${cartItem.quantity}" min="1" 
-                           onchange="recalculateItemTotal(this.closest('.item-row'))">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Harga</label>
-                    <input type="number" class="form-control item-hargajual" 
-                           name="details[${itemIndex}][hargajual]"
-                           value="${cartItem.hargajual}" 
-                           onchange="recalculateItemTotal(this.closest('.item-row'))">
+                    <label class="form-label">Satuan</label>
+                    <input type="text" class="form-control item-satuan" 
+                           name="details[${itemIndex}][satuan]" 
+                           value="${cartItem.satuan}" readonly>
                 </div>
                 <div class="col-md-1">
-                    <label class="form-label">Diskon %</label>
-                    <input type="number" class="form-control item-discjual" 
-                           name="details[${itemIndex}][discjual]"
-                           value="${cartItem.discjual}" step="0.01" 
+                    <label class="form-label">Jumlah</label>
+                    <input type="number" class="form-control item-jumlah" 
+                           name="details[${itemIndex}][jumlah]" 
+                           value="${cartItem.quantity}" min="1" 
+                           onchange="recalculateItemTotal(this.closest('.item-row'))" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Harga Satuan</label>
+                    <input type="text" class="form-control item-hargasatuan" 
+                           name="details[${itemIndex}][hargasatuan]" 
+                           value="${parseInt(cartItem.hargajual).toLocaleString('id-ID')}" 
+                           data-original-value="${cartItem.hargajual}" 
+                           onchange="updateHargaSatuan(this)" required>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Discount %</label>
+                    <input type="number" class="form-control item-discount" 
+                           name="details[${itemIndex}][discount]" 
+                           value="${cartItem.discjual || 0}" min="0" max="100" step="0.01"
                            onchange="recalculateItemTotal(this.closest('.item-row'))">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Total Harga</label>
                     <input type="text" class="form-control item-totalharga" 
-                           name="details[${itemIndex}][totalharga]"
+                           name="details[${itemIndex}][totalharga]" 
                            value="${total.toLocaleString('id-ID')}" 
                            data-original-value="${total}" readonly>
                 </div>
                 <div class="col-md-1">
-                    <label class="form-label">Satuan</label>
-                    <input type="text" class="form-control item-satuan" 
-                           name="details[${itemIndex}][satuan]"
-                           value="${cartItem.satuan}" readonly>
-                </div>
-                <div class="col-md-1">
-                    <label class="form-label">Action</label>
-                    <button type="button" class="btn btn-danger btn-sm w-100" 
-                            onclick="removeItem(${itemIndex})">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-grid">
+                        <button type="button" class="btn btn-outline-danger btn-sm remove-item">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1678,16 +1705,27 @@ function updateHargaSatuan(input) {
 
 // Recalculate individual item total
 function recalculateItemTotal(row) {
-    const jumlah = parseInt(row.querySelector('.item-jumlah').value) || 0;
-    const hargasatuan = parseInt(row.querySelector('.item-hargasatuan').getAttribute('data-original-value')) || 0;
-    const discount = parseFloat(row.querySelector('.item-discount').value) || 0;
+    const jumlahEl = row.querySelector('.item-jumlah');
+    const hargasatuanEl = row.querySelector('.item-hargasatuan');
+    const discountEl = row.querySelector('.item-discount');
+    const totalhargaEl = row.querySelector('.item-totalharga');
+    
+    // Check if all required elements exist
+    if (!jumlahEl || !hargasatuanEl || !totalhargaEl) {
+        console.warn('Cannot recalculate: missing required elements in row', row);
+        return;
+    }
+    
+    const jumlah = parseInt(jumlahEl.value) || 0;
+    const hargasatuan = parseInt(hargasatuanEl.getAttribute('data-original-value')) || 0;
+    const discount = discountEl ? (parseFloat(discountEl.value) || 0) : 0;
     
     const subtotal = jumlah * hargasatuan;
     const discountAmount = subtotal * (discount / 100);
     const total = Math.round(subtotal - discountAmount);
     
-    row.querySelector('.item-totalharga').value = total.toLocaleString('id-ID');
-    row.querySelector('.item-totalharga').setAttribute('data-original-value', total);
+    totalhargaEl.value = total.toLocaleString('id-ID');
+    totalhargaEl.setAttribute('data-original-value', total);
     
     // Recalculate total order
     calculateTotal();

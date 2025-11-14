@@ -251,6 +251,13 @@ try {
 				]);
 			}
 			
+			// Clear cart if order is created from cart (only for customer role)
+			$fromCart = isset($in['from_cart']) && $in['from_cart'] === true;
+			if ($fromCart && $user['role'] === 'customer' && !empty($user['kodecustomer'])) {
+				$stmt = $pdo->prepare('DELETE FROM cart WHERE customer_code = ?');
+				$stmt->execute([$user['kodecustomer']]);
+			}
+			
 			$pdo->commit();
 			respond(201, ['success' => true, 'message' => 'Order berhasil dibuat', 'noorder' => $noorder]);
 			
